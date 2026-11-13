@@ -307,8 +307,31 @@ class Spiel:
 
     @staticmethod
     def _dimmen(bild, anteil: float):
-        """Bild mit einem Bruchteil der Helligkeit — für Ein- und Ausblenden."""
+        """Bild mit einem Bruchteil der Helligkeit."""
         return [[tuple(int(k * anteil) for k in zelle) for zelle in reihe] for reihe in bild]
+
+    # Abfall der Welle nach Abstand zur Bandmitte: Mitte voll, Flanken schwächer.
+    WELLE_VERLAUF = {0: 1.0, 1: 0.55, 2: 0.22}
+
+    def _welle_senkrecht(self, mitte: int):
+        """Waagerechte Bande, die senkrecht durchläuft."""
+        bild = self._leer()
+        for r in range(self.feld.reihen):
+            anteil = self.WELLE_VERLAUF.get(abs(r - mitte), 0.0)
+            if anteil:
+                bild[r] = [tuple(int(k * anteil) for k in WEISS) for _ in range(self.feld.spalten)]
+        return bild
+
+    def _welle_quer(self, mitte: int, rueckwaerts: bool = False):
+        """Senkrechte Bande, die waagerecht durchläuft."""
+        bild = self._leer()
+        for s in range(self.feld.spalten):
+            anteil = self.WELLE_VERLAUF.get(abs(s - mitte), 0.0)
+            if anteil:
+                spalte = tuple(int(k * anteil) for k in WEISS)
+                for r in range(self.feld.reihen):
+                    bild[r][s] = spalte
+        return bild
 
     # -- ein Stein -------------------------------------------------------
     @staticmethod
@@ -406,46 +429,19 @@ class Spiel:
         for _ in range(3):
             self._zeigen(hardware, [[ROT] * self.feld.spalten for _ in self.feld.gitter], "vorbei", takt * 2)
             self._zeigen(hardware, self._leer(), "", takt * 0.6)
-        # Wisch-Tempo: auf Wunsch noch schneller (13.11.2026) — 0.5 Takte je Schritt.
+        # Wisch-Tempo: 0.5 Takte je Schritt.
         schritt = takt * 0.5
-        weiss_voll = [[WEISS] * self.feld.spalten for _ in self.feld.gitter]
 
-        # Ein Durchgang mit weichem Ein- und Ausblenden an beiden Enden: der weiße Balken
-        # erscheint nicht hart, sondern fährt hoch und läuft am Ende aus.
-        def durchgang(bild_fuer_grenze, schritte: int, hinweis: str) -> None:
-            for anteil in (0.25, 0.55, 0.85):
-                self._zeigen(hardware, self._dimmen(weiss_voll, anteil), hinweis + "-ein", schritt)
-            for g in range(schritte):
-                self._zeigen(hardware, bild_fuer_grenze(g), hinweis, schritt)
-            for anteil in (0.85, 0.55, 0.25):
-                self._zeigen(hardware, self._dimmen(weiss_voll, anteil), hinweis + "-aus", schritt)
-
-        # 2. senkrecht von oben nach unten
-        def senkrecht(g: int):
-            bild = self._leer()
-            for r in range(g - 1, self.feld.reihen):
-                bild[r] = [WEISS] * self.feld.spalten
-            return bild
-
-        # 3. waagerecht von links nach rechts
-        def quer_hin(g: int):
-            bild = self._leer()
-            for s in range(g - 1, self.feld.spalten):
-                for r in range(self.feld.reihen):
-                    bild[r][s] = WEISS
-            return bild
-
-        # 4. waagerecht zurück von rechts nach links
-        def quer_zurueck(g: int):
-            bild = self._leer()
-            for s in range(0, self.feld.spalten - g):
-                for r in range(self.feld.reihen):
-                    bild[r][s] = WEISS
-            return bild
-
-        durchgang(senkrecht, self.feld.reihen + 2, "wischen-senkrecht")
-        durchgang(quer_hin, self.feld.spalten + 2, "wischen-quer")
-        durchgang(quer_zurueck, self.feld.spalten + 2, "wischen-zurueck")
+        # Kein Vollbild-Aufhellen mehr (sah falsch aus), sondern eine Welle mit weichem Rand
+        # wie die Wellen-Animation in iCUE: eine helle Bande läuft durch, ihre Flanken
+        # leuchten schwächer und laufen ins Dunkel aus. WELLE_VERLAUF ist der Abfall nach
+        # Abstand zur Bandmitte.
+        for g in range(-2, self.feld.reihen + 2):
+            self._zeigen(hardware, self._welle_senkrecht(g), "welle-senkrecht", schritt)
+        for g in range(-2, self.feld.spalten + 2):
+            self._zeigen(hardware, self._welle_quer(g, rueckwaerts=False), "welle-quer", schritt)
+        for g in range(self.feld.spalten + 1, -3, -1):
+            self._zeigen(hardware, self._welle_quer(g, rueckwaerts=True), "welle-zurueck", schritt)
         # 5. Kurz dunkel bleiben, bevor die neue Runde beginnt
         self._zeigen(hardware, self._leer(), "pause", takt * 8)
         if not self.still:
