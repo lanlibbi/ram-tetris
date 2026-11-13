@@ -145,7 +145,18 @@ class Feld:
                     ziel -= 1
 
     def voll(self) -> bool:
-        return all(self.gitter[0][s] is not None for s in range(self.spalten))
+        """Verloren, sobald EINE Leiste oben angekommen ist.
+
+        Vorher mussten alle Spalten gleichzeitig voll sein — dadurch lief das Spiel viel zu
+        lange weiter, obwohl ein Riegel längst bis oben zugebaut war (Wunsch 13.11.2026).
+        """
+        return any(self.gitter[0][s] is not None for s in range(self.spalten))
+
+    def volle_spalte(self) -> int | None:
+        for s in range(self.spalten):
+            if self.gitter[0][s] is not None:
+                return s
+        return None
 
     def farben(self) -> list[list[tuple[int, int, int]]]:
         return [[z if z is not None else LEER for z in reihe] for reihe in self.gitter]
@@ -386,9 +397,17 @@ class Spiel:
         return not feld.voll()
 
     def runde_zu_ende(self, hardware: Hardware | None, takt: float) -> None:
+        # 1. Verloren: alles rot, dreimal blinken
         for _ in range(3):
             self._zeigen(hardware, [[ROT] * self.feld.spalten for _ in self.feld.gitter], "vorbei", takt * 2)
             self._zeigen(hardware, self._leer(), "", takt * 0.6)
+        # 2. Reset: eine weiße Welle wischt von oben nach unten alles ab
+        for grenze in range(self.feld.reihen + 2):
+            bild = self._leer()
+            for r in range(grenze - 1, self.feld.reihen):
+                bild[r] = [WEISS] * self.feld.spalten
+            self._zeigen(hardware, bild, "wischen", takt * 0.5)
+        self._zeigen(hardware, self._leer(), "leer", takt)
         if not self.still:
             print(f"--- Runde vorbei: {self.steine} Steine, {self.punkte} Punkte, "
                   f"{self.serien} Ketten — neu ---")
