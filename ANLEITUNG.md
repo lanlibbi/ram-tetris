@@ -78,32 +78,32 @@ egal, sie bestimmt nur, welche Farbe im Terminal als A, B, C… erscheint.
 
 ## 4b. Das Einstellungsfenster (empfohlen)
 
-Statt Befehle zu tippen gibt es ein Fenster im Browser — mit großen Farbflächen, dem Farbwähler des
-Systems und Knöpfen zum Installieren und Entfernen:
+Kein Befehl, kein Port zum Merken: im Projektordner liegt **`einstellungen.cmd`** — ein Doppelklick
+genügt. Der Starter prüft, ob der lokale Server schon läuft; wenn ja, öffnet er nur den Browser, wenn
+nein, startet er ihn und öffnet dann die Seite. Auf Wunsch eine Verknüpfung auf den Desktop legen
+(Rechtsklick → Senden an → Desktop).
 
-```
-python einstellungen.py
-```
+Dort einstellen:
 
-Es öffnet sich `http://127.0.0.1:8787/`. Dort einstellen:
+- **Piece Colors** — die vier Farben der fallenden Formen (große Flächen, Klick öffnet den Farbwähler)
+- **Game Over Flash** — die Farbe, in der es blinkt, wenn eine Leiste voll ist
+- **Cleanup Sweep** — die Farbe der Wellen, die danach durchlaufen
+- **Speed** — Bilder je Sekunde und Wiedergabe-Tempo
+- **Presets** — sechs fertige Paletten zum Antippen
 
-- **vier Farben für die Formen** (große Flächen, Klick öffnet den Farbwähler)
-- **Verloren-Blitz** — die Farbe, in der es blinkt, wenn eine Leiste voll ist
-- **Putz-Wellen** — die Farbe der Wellen, die danach durchlaufen
-- **Tempo** (Bilder je Sekunde) und **Wiedergabe-Tempo**
-
-Knöpfe:
+Knöpfe: **Save** · **Preview Run** · **Deploy** · **Remove**
 
 | Knopf | Wirkung |
 |---|---|
-| **Speichern** | schreibt `einstellungen.json`; das Spiel liest sie beim nächsten Start |
-| **Kurz zeigen** | startet einen Probelauf mit den aktuellen Farben |
-| **Installieren** | legt `start.cmd` an, setzt eine Verknüpfung in den Autostart und startet das Spiel |
-| **Entfernen** | nimmt Autostart und `start.cmd` zurück und beendet das Spiel |
+| **Save** | schreibt `einstellungen.json`; das Spiel liest sie beim nächsten Start |
+| **Preview Run** | startet einen Probelauf mit den aktuellen Farben |
+| **Deploy** | legt `start.cmd` an, setzt eine Verknüpfung in den Autostart und startet das Spiel |
+| **Remove** | nimmt Autostart und `start.cmd` zurück und beendet das Spiel |
 
-Warum im Browser und nicht als klassisches Fenster: Blenders Python — der Interpreter, den dieses
-Projekt mitbenutzt — bringt Tkinter nicht mit. Die Seite kommt aus der Standardbibliothek, es wird
-also weiterhin nichts installiert.
+Von Hand geht es auch: `python einstellungen.py` und dann `http://127.0.0.1:8787/` aufrufen. Warum im
+Browser und nicht als klassisches Fenster: Blenders Python — der Interpreter, den dieses Projekt
+mitbenutzt — bringt Tkinter nicht mit, und große Farbflächen mit dem System-Farbwähler bekommt man im
+Browser ohnehin leichter.
 
 ## 5. Tempo ändern
 
