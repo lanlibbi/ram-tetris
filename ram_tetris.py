@@ -401,21 +401,29 @@ class Spiel:
         for _ in range(3):
             self._zeigen(hardware, [[ROT] * self.feld.spalten for _ in self.feld.gitter], "vorbei", takt * 2)
             self._zeigen(hardware, self._leer(), "", takt * 0.6)
-        # 2. Reset, erster Durchgang: weiße Welle wischt von oben nach unten.
-        #    Tempo auf Wunsch verdoppelt (13.11.2026) — der Wisch soll sichtbar arbeiten.
+        # Wisch-Tempo: auf Wunsch schneller (13.11.2026) — 0.8 statt 1.2 Takte je Schritt.
+        schritt = takt * 0.8
+        # 2. Reset, erster Durchgang: weiße Welle wischt von oben nach unten
         for grenze in range(self.feld.reihen + 2):
             bild = self._leer()
             for r in range(grenze - 1, self.feld.reihen):
                 bild[r] = [WEISS] * self.feld.spalten
-            self._zeigen(hardware, bild, "wischen-senkrecht", takt * 1.2)
-        # 3. Reset, zweiter Durchgang: waagerecht von links nach rechts (Wunsch 13.11.2026)
+            self._zeigen(hardware, bild, "wischen-senkrecht", schritt)
+        # 3. zweiter Durchgang: waagerecht von links nach rechts
         for grenze in range(self.feld.spalten + 2):
             bild = self._leer()
             for s in range(grenze - 1, self.feld.spalten):
                 for r in range(self.feld.reihen):
                     bild[r][s] = WEISS
-            self._zeigen(hardware, bild, "wischen-quer", takt * 1.2)
-        # 4. Kurz dunkel bleiben, bevor die neue Runde beginnt
+            self._zeigen(hardware, bild, "wischen-quer", schritt)
+        # 4. dritter Durchgang: zurück von rechts nach links (Wunsch 13.11.2026)
+        for grenze in range(self.feld.spalten + 2):
+            bild = self._leer()
+            for s in range(0, self.feld.spalten - grenze):
+                for r in range(self.feld.reihen):
+                    bild[r][s] = WEISS
+            self._zeigen(hardware, bild, "wischen-zurueck", schritt)
+        # 5. Kurz dunkel bleiben, bevor die neue Runde beginnt
         self._zeigen(hardware, self._leer(), "pause", takt * 8)
         if not self.still:
             print(f"--- Runde vorbei: {self.steine} Steine, {self.punkte} Punkte, "
@@ -482,6 +490,9 @@ def main() -> int:
     p.add_argument("--speed", type=float, default=1.0)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--dauer", type=float, default=0, help="nach N Sekunden sauber aufhören (0 = endlos)")
+    p.add_argument("--runden", type=int, default=0,
+                   help="nach N abgeschlossenen Runden aufhören (0 = endlos) — für eine Schleife, "
+                        "die auch Verloren-Animation und Wischen enthält")
     args = p.parse_args()
 
     if args.probe:
@@ -519,6 +530,7 @@ def main() -> int:
     print(f"Feld: {reihen} Reihen × {spalten} Spalten, {len(spiel.palette)} Farben. "
           f"Strg+C beendet.")
     start = time.time()
+    runden = 0
     try:
         while True:
             if args.dauer and time.time() - start >= args.dauer:
@@ -526,6 +538,10 @@ def main() -> int:
                 break
             if not spiel.stein(hardware, takt):
                 spiel.runde_zu_ende(hardware, takt)
+                runden += 1
+                if args.runden and runden >= args.runden:
+                    print(f"{runden} Runde(n) abgeschlossen — Aufnahme endet")
+                    break
                 if args.simulate and spiel.steine >= args.steine:
                     break
             if args.simulate and spiel.steine >= args.steine:
