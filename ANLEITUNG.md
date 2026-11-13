@@ -75,6 +75,36 @@ Befehl nicht jedes Mal tippen muss.
 Farbnamen für Hex-Werte findet man überall im Netz („color picker"). Die Reihenfolge der Liste ist
 egal, sie bestimmt nur, welche Farbe im Terminal als A, B, C… erscheint.
 
+
+## 4b. Das Einstellungsfenster (empfohlen)
+
+Statt Befehle zu tippen gibt es ein Fenster im Browser — mit großen Farbflächen, dem Farbwähler des
+Systems und Knöpfen zum Installieren und Entfernen:
+
+```
+python einstellungen.py
+```
+
+Es öffnet sich `http://127.0.0.1:8787/`. Dort einstellen:
+
+- **vier Farben für die Formen** (große Flächen, Klick öffnet den Farbwähler)
+- **Verloren-Blitz** — die Farbe, in der es blinkt, wenn eine Leiste voll ist
+- **Putz-Wellen** — die Farbe der Wellen, die danach durchlaufen
+- **Tempo** (Bilder je Sekunde) und **Wiedergabe-Tempo**
+
+Knöpfe:
+
+| Knopf | Wirkung |
+|---|---|
+| **Speichern** | schreibt `einstellungen.json`; das Spiel liest sie beim nächsten Start |
+| **Kurz zeigen** | startet einen Probelauf mit den aktuellen Farben |
+| **Installieren** | legt `start.cmd` an, setzt eine Verknüpfung in den Autostart und startet das Spiel |
+| **Entfernen** | nimmt Autostart und `start.cmd` zurück und beendet das Spiel |
+
+Warum im Browser und nicht als klassisches Fenster: Blenders Python — der Interpreter, den dieses
+Projekt mitbenutzt — bringt Tkinter nicht mit. Die Seite kommt aus der Standardbibliothek, es wird
+also weiterhin nichts installiert.
+
 ## 5. Tempo ändern
 
 | Was | Schalter | Wirkung |

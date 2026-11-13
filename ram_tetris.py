@@ -68,6 +68,10 @@ AUS = (0, 0, 0)
 WEISS = (255, 255, 255)
 ROT = (255, 0, 0)
 
+# Farben für die Sondersequenzen — über die Konfigurationsdatei änderbar (Einstellungsfenster).
+FARBE_VERLOREN = ROT      # Blinken, wenn die Runde verloren ist
+FARBE_WELLE = WEISS       # die Putz-Wellen beim Neustart
+
 
 # ---------------------------------------------------------------------------
 # Spielfeld
@@ -322,7 +326,7 @@ class Spiel:
         for r in range(self.feld.reihen):
             anteil = self.WELLE_VERLAUF.get(abs(r - mitte), 0.0)
             if anteil:
-                bild[r] = [tuple(int(k * anteil) for k in WEISS) for _ in range(self.feld.spalten)]
+                bild[r] = [tuple(int(k * anteil) for k in FARBE_WELLE) for _ in range(self.feld.spalten)]
         return bild
 
     def _welle_quer(self, mitte: int, rueckwaerts: bool = False):
@@ -331,7 +335,7 @@ class Spiel:
         for s in range(self.feld.spalten):
             anteil = self.WELLE_VERLAUF.get(abs(s - mitte), 0.0)
             if anteil:
-                spalte = tuple(int(k * anteil) for k in WEISS)
+                spalte = tuple(int(k * anteil) for k in FARBE_WELLE)
                 for r in range(self.feld.reihen):
                     bild[r][s] = spalte
         return bild
@@ -430,7 +434,8 @@ class Spiel:
     def runde_zu_ende(self, hardware: Hardware | None, takt: float) -> None:
         # 1. Verloren: alles rot, dreimal blinken
         for _ in range(3):
-            self._zeigen(hardware, [[ROT] * self.feld.spalten for _ in self.feld.gitter], "vorbei", takt * 2)
+            self._zeigen(hardware, [[FARBE_VERLOREN] * self.feld.spalten for _ in self.feld.gitter],
+                         "vorbei", takt * 2)
             self._zeigen(hardware, self._leer(), "", takt * 0.6)
         # Wisch-Tempo: 0.5 Takte je Schritt.
         schritt = takt * 0.5
@@ -514,10 +519,29 @@ def main() -> int:
     p.add_argument("--speed", type=float, default=1.0)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--dauer", type=float, default=0, help="nach N Sekunden sauber aufhören (0 = endlos)")
+    p.add_argument("--konfig", metavar="DATEI",
+                   help="Konfigurationsdatei (Vorgabe: einstellungen.json neben dem Skript)")
     p.add_argument("--runden", type=int, default=0,
                    help="nach N abgeschlossenen Runden aufhören (0 = endlos) — für eine Schleife, "
                         "die auch Verloren-Animation und Wischen enthält")
     args = p.parse_args()
+
+    # Konfigurationsdatei (aus dem Einstellungsfenster): Farben für Formen, Verloren, Wellen
+    konfig_pfad = args.konfig or os.path.join(HIER, "einstellungen.json")
+    konfig = {}
+    if os.path.exists(konfig_pfad):
+        try:
+            konfig = json.loads(open(konfig_pfad, encoding="utf-8").read())
+        except Exception as fehler:
+            print(f"Hinweis: {konfig_pfad} ist unlesbar ({fehler}) — es gelten die Vorgaben.")
+    global FARBE_VERLOREN, FARBE_WELLE
+    if isinstance(konfig.get("verloren"), list) and len(konfig["verloren"]) == 3:
+        FARBE_VERLOREN = tuple(konfig["verloren"])
+    if isinstance(konfig.get("welle"), list) and len(konfig["welle"]) == 3:
+        FARBE_WELLE = tuple(konfig["welle"])
+    if not args.palette and isinstance(konfig.get("palette"), list) and len(konfig["palette"]) >= 2:
+        args.palette = ",".join(f"{r:02X}{g:02X}{b:02X}"
+                                for r, g, b in (tuple(c) for c in konfig["palette"]))
 
     # Eigene Farben von der Kommandozeile: "FFD200,0A28AA,FF1E1E,FFFFFF"
     palette = PALETTE
