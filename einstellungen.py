@@ -62,256 +62,287 @@ def hexwert(farbe) -> str:
 SEITE = """<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RAM-Tetris — Farben und Installation</title>
+<title>RAM-Tetris — Lighting Control</title>
 <style>
   :root{
     color-scheme: dark;
-    --bg:#0e1014; --bg2:#141821; --card:#171b23; --linie:#252b36;
-    --text:#e9ecf2; --gedimmt:#8d95a6; --akzent:#4c8dff; --akzent2:#8b5cf6;
-    --gut:#3ddc97; --warn:#ff7a7a;
-    --radius:16px;
+    --text:#eef1f7; --gedimmt:#98a1b4; --fein:#6d7688;
+    --glas:rgba(255,255,255,.045);
+    --glas-hell:rgba(255,255,255,.075);
+    --rand:rgba(255,255,255,.10);
+    --rand-hell:rgba(255,255,255,.18);
+    --akzent:#5b8cff; --akzent2:#a855f7; --gut:#4ade80; --warn:#ff8080;
   }
   *{box-sizing:border-box}
+  html,body{min-height:100%}
   body{
-    margin:0; min-height:100vh; color:var(--text);
+    margin:0; color:var(--text); overflow-x:hidden;
     font:15px/1.55 ui-sans-serif,system-ui,"Segoe UI",Inter,sans-serif;
+    background:#07080c; -webkit-font-smoothing:antialiased;
+  }
+  /* Hintergrund: tiefe Fläche mit weichen Farbwolken */
+  .himmel{position:fixed; inset:-20% -10% auto -10%; height:75vh; z-index:-2; pointer-events:none;
     background:
-      radial-gradient(1100px 600px at 12% -8%, rgba(76,141,255,.14), transparent 60%),
-      radial-gradient(900px 500px at 92% 4%, rgba(139,92,246,.12), transparent 62%),
-      var(--bg);
-    -webkit-font-smoothing:antialiased;
+      radial-gradient(46% 60% at 18% 22%, #2456c7aa, transparent 62%),
+      radial-gradient(40% 52% at 78% 12%, #7b3fe4aa, transparent 60%),
+      radial-gradient(38% 46% at 58% 58%, #0f7f8c99, transparent 64%);
+    filter:blur(64px) saturate(130%);
   }
-  .wrap{max-width:900px; margin:0 auto; padding:44px 22px 80px}
+  .korn{position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{max-width:920px; margin:0 auto; padding:46px 22px 90px}
 
-  header.kopf{margin-bottom:30px}
-  .marke{display:flex; align-items:center; gap:13px}
-  .logo{width:40px;height:40px;border-radius:12px;flex:0 0 auto;
-    background:linear-gradient(135deg,var(--akzent),var(--akzent2));
-    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:7px}
-  .logo i{border-radius:2px;background:#0e1014cc}
-  .logo i:nth-child(1){background:#ffd200}
-  .logo i:nth-child(2){background:#0a28aa}
-  .logo i:nth-child(3){background:#ff1e1e}
-  .logo i:nth-child(4){background:#fff}
-  h1{font-size:26px;margin:0;letter-spacing:-.02em;font-weight:650}
-  .unter{color:var(--gedimmt);margin:6px 0 0;font-size:14px;max-width:60ch}
+  /* Kopf */
+  header.kopf{display:flex; align-items:center; gap:15px; margin-bottom:26px}
+  .logo{width:45px;height:45px;border-radius:13px;flex:0 0 auto;
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:8px;
+    background:linear-gradient(140deg,#ffffff1f,#ffffff08);
+    border:1px solid var(--rand-hell); backdrop-filter:blur(12px);
+    box-shadow:0 14px 34px -22px #7b3fe4, inset 0 1px 0 #ffffff40}
+  .logo i{border-radius:2px; box-shadow:0 0 8px currentColor}
+  .logo i:nth-child(1){background:#ffd200;color:#ffd200}
+  .logo i:nth-child(2){background:#3b6bff;color:#3b6bff}
+  .logo i:nth-child(3){background:#ff3b3b;color:#ff3b3b}
+  .logo i:nth-child(4){background:#fff;color:#fff}
+  h1{font-size:27px;margin:0;letter-spacing:-.025em;font-weight:660;
+     background:linear-gradient(100deg,#fff,#c7d2ff 60%,#e6c9ff);
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  .unter{color:var(--gedimmt);margin:5px 0 0;font-size:13.5px}
+  .badge{margin-left:auto; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:#c7d2ff; padding:7px 12px; border-radius:999px;
+    background:linear-gradient(140deg,#ffffff14,#ffffff06); border:1px solid var(--rand);
+    backdrop-filter:blur(12px); white-space:nowrap}
 
+  /* Glaskarten */
   .karte{
-    background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 40%),var(--card);
-    border:1px solid var(--linie); border-radius:var(--radius);
-    padding:22px; margin-top:18px;
+    position:relative; border-radius:20px; padding:22px 22px 24px; margin-top:16px;
+    background:linear-gradient(160deg,var(--glas-hell),var(--glas) 42%,rgba(255,255,255,.02));
+    border:1px solid var(--rand);
+    backdrop-filter:blur(22px) saturate(150%);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 26px 60px -40px #000, inset 0 1px 0 rgba(255,255,255,.14);
   }
-  .karte > h2{
-    font-size:12px; text-transform:uppercase; letter-spacing:.11em; color:var(--gedimmt);
-    margin:0 0 16px; font-weight:600; display:flex; align-items:center; gap:9px;
-  }
-  .karte > h2::after{content:""; flex:1; height:1px; background:var(--linie)}
+  .karte::before{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:radial-gradient(120% 80% at 12% -20%, #ffffff14, transparent 60%)}
+  .karte > h2{position:relative; font-size:11.5px; text-transform:uppercase; letter-spacing:.16em;
+    color:#b9c3d6; margin:0 0 16px; font-weight:600; display:flex; align-items:center; gap:12px}
+  .karte > h2 span{color:#6f7a8f; letter-spacing:.04em; text-transform:none; font-weight:400;
+    font-size:12px}
+  .karte > h2::after{content:""; flex:1; height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,.16),transparent)}
 
-  .farben{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:14px}
+  /* Farbkacheln */
+  .farben{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px}
   .kachel{position:relative; cursor:pointer; border:0; padding:0; background:none; font:inherit;
-    color:inherit; text-align:left; transition:transform .14s ease}
-  .kachel:hover{transform:translateY(-2px)}
-  .kachel:focus-visible{outline:2px solid var(--akzent); outline-offset:3px; border-radius:16px}
-  .kachel .farbe{
-    height:112px; border-radius:14px; border:1px solid #00000055;
-    box-shadow:inset 0 1px 0 #ffffff2e, inset 0 -18px 40px #00000055, 0 8px 22px -14px #000;
-    position:relative; overflow:hidden;
-  }
-  .kachel .farbe::after{
-    content:""; position:absolute; inset:0 auto auto 0; width:100%; height:44%;
-    background:linear-gradient(180deg,rgba(255,255,255,.16),transparent);
-  }
-  .kachel .name{font-size:12.5px; margin-top:9px; color:var(--gedimmt)}
-  .kachel .hex{
-    position:absolute; bottom:8px; right:9px; font:11px/1 ui-monospace,Consolas,monospace;
-    color:#000000a6; background:#ffffffcc; padding:4px 6px; border-radius:6px; letter-spacing:.04em;
-  }
+    color:inherit; text-align:left; transition:transform .16s cubic-bezier(.2,.8,.3,1)}
+  .kachel:hover{transform:translateY(-3px)}
+  .kachel:focus-visible{outline:2px solid var(--akzent); outline-offset:4px; border-radius:18px}
+  .kachel .farbe{position:relative; height:118px; border-radius:16px; overflow:hidden;
+    border:1px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -30px 60px rgba(0,0,0,.45),
+               0 18px 40px -26px #000}
+  .kachel .farbe::after{content:""; position:absolute; inset:0;
+    background:linear-gradient(165deg,rgba(255,255,255,.30),rgba(255,255,255,.04) 38%,transparent 62%)}
+  .kachel .glasrand{position:absolute; inset:0; border-radius:16px; pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  .kachel .hex{position:absolute; bottom:9px; right:10px; z-index:3;
+    font:11px/1 ui-monospace,Consolas,monospace; letter-spacing:.05em; color:#0b0d12;
+    background:rgba(255,255,255,.82); padding:5px 7px; border-radius:7px;
+    backdrop-filter:blur(6px); box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .kachel .name{margin-top:10px; font-size:12.5px; color:#c9d2e2; display:flex; gap:6px;
+    align-items:baseline}
+  .kachel .name b{font-weight:600; color:#eef1f7}
+  .kachel .name i{font-style:normal; color:var(--fein); font-size:11.5px}
   .kachel input[type=color]{position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%}
-  .kachel.welle .farbe::before{
-    content:""; position:absolute; inset:0; z-index:0;
-    background:linear-gradient(105deg,transparent 20%,#ffffff66 42%,#ffffffaa 50%,#ffffff66 58%,transparent 80%);
-    background-size:220% 100%; animation:welle 3.6s linear infinite}
-  @keyframes welle{from{background-position:180% 0} to{background-position:-80% 0}}
-  .kachel .farbe > .hex{z-index:2}
-  button.aktion.hinweis{border-color:#2f4d7a; color:#a9c8ff; background:#111a26}
-  footer a{color:#7ea6ff; text-decoration:none}
-  footer a:hover{text-decoration:underline}
+  .kachel.sweep .farbe::before{content:""; position:absolute; inset:0; z-index:1;
+    background:linear-gradient(105deg,transparent 22%,#ffffff55 44%,#ffffffcc 50%,#ffffff55 56%,transparent 78%);
+    background-size:230% 100%; animation:sweep 3.4s linear infinite}
+  @keyframes sweep{from{background-position:180% 0} to{background-position:-90% 0}}
+  .kachel.flash .farbe::before{content:""; position:absolute; inset:0; z-index:1;
+    background:#fff; opacity:0; animation:flash 2.4s ease-in-out infinite}
+  @keyframes flash{0%,62%,100%{opacity:0} 8%,18%{opacity:.55} 13%,24%{opacity:0}}
 
-  .vorschau-karte{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start}
-  .brett{display:grid; grid-template-columns:repeat(4,24px); gap:4px;
-    padding:13px; border-radius:13px; background:#0b0d11; border:1px solid var(--linie);
-    box-shadow:inset 0 0 26px #00000088}
-  .brett span{width:24px;height:15px;border-radius:3px;background:#181d26;
-    box-shadow:inset 0 1px 0 #ffffff10}
-  .legende{color:var(--gedimmt); font-size:12.5px; max-width:34ch}
+  /* Vorschau */
+  .vorschau-karte{display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start}
+  .bretter{display:flex; gap:14px}
+  .brett{display:grid; grid-template-columns:repeat(4,26px); gap:4px; padding:14px;
+    border-radius:15px; background:rgba(4,6,10,.55); border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(10px); box-shadow:inset 0 0 34px #00000099, 0 10px 30px -24px #000}
+  .brett span{width:26px;height:16px;border-radius:4px;background:rgba(255,255,255,.045);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .legende{color:var(--gedimmt); font-size:13px; max-width:36ch}
   .legende b{color:var(--text); font-weight:600}
 
-  .zahlen{display:flex; gap:24px; flex-wrap:wrap}
-  .feld label{display:block; font-size:12.5px; color:var(--gedimmt); margin-bottom:7px}
-  .feld small{display:block; color:#69707f; font-size:11.5px}
-  input[type=number]{
-    width:96px; font:15px/1 inherit; padding:11px 12px; border-radius:10px;
-    border:1px solid var(--linie); background:#101319; color:var(--text);
-  }
-  input[type=number]:focus{outline:none; border-color:var(--akzent); box-shadow:0 0 0 3px #4c8dff33}
+  /* Paletten */
+  .chips{display:flex; gap:10px; flex-wrap:wrap}
+  .chip{border:1px solid var(--rand); border-radius:999px; padding:9px 15px; font-size:13px;
+    color:#d3daea; cursor:pointer; display:flex; align-items:center; gap:9px;
+    background:linear-gradient(150deg,#ffffff12,#ffffff04); backdrop-filter:blur(10px);
+    transition:border-color .15s, transform .12s, background .15s}
+  .chip:hover{border-color:var(--rand-hell); transform:translateY(-1px); background:#ffffff18}
+  .chip i{width:13px;height:13px;border-radius:4px;display:inline-block;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 0 8px currentColor}
 
-  .chips{display:flex; gap:9px; flex-wrap:wrap; margin-top:4px}
-  .chip{border:1px solid var(--linie); background:#101319; color:#c9d1e0; border-radius:999px;
-    padding:8px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px;
-    transition:border-color .15s, background .15s}
-  .chip:hover{border-color:#3a4050; background:#161b24}
-  .chip i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  /* Zahlen */
+  .zahlen{display:flex; gap:26px; flex-wrap:wrap}
+  .feld label{display:block; font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+    color:#b9c3d6; margin-bottom:8px}
+  .feld small{display:block; color:var(--fein); font-size:11.5px; margin-top:7px}
+  input[type=number]{width:104px; font:15px/1 inherit; padding:12px 13px; border-radius:12px;
+    border:1px solid var(--rand); background:rgba(6,8,12,.55); color:var(--text);
+    backdrop-filter:blur(8px)}
+  input[type=number]:focus{outline:none; border-color:var(--akzent);
+    box-shadow:0 0 0 4px rgba(91,140,255,.20)}
 
-  .leiste{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px}
-  button.aktion{
-    font:inherit; font-weight:550; padding:12px 20px; border-radius:11px; cursor:pointer;
-    border:1px solid var(--linie); background:#1a1f28; color:var(--text);
-    transition:transform .12s ease, filter .15s ease, border-color .15s
-  }
-  button.aktion:hover{filter:brightness(1.16)}
+  /* Knöpfe */
+  .leiste{display:flex; gap:11px; flex-wrap:wrap; align-items:center}
+  button.aktion{font:inherit; font-weight:560; padding:13px 21px; border-radius:13px; cursor:pointer;
+    color:var(--text); border:1px solid var(--rand); backdrop-filter:blur(12px);
+    background:linear-gradient(160deg,#ffffff16,#ffffff05);
+    transition:transform .12s, filter .15s, border-color .15s}
+  button.aktion:hover{filter:brightness(1.2); border-color:var(--rand-hell)}
   button.aktion:active{transform:translateY(1px)}
-  button.haupt{border:0; background:linear-gradient(135deg,var(--akzent),var(--akzent2));
-    box-shadow:0 10px 24px -12px #4c8dff}
-  button.gefahr{color:var(--warn); border-color:#4a2a2f; background:#1d1417}
-  .abstand{flex:1}
+  button.haupt{position:relative; border:1px solid rgba(255,255,255,.28); color:#fff;
+    background:linear-gradient(135deg,#5b8cff,#a855f7);
+    box-shadow:0 18px 40px -20px #5b8cff99, inset 0 1px 0 #ffffff66}
+  button.deploy{border-color:rgba(168,85,247,.45); color:#e6d4ff;
+    background:linear-gradient(160deg,rgba(168,85,247,.22),rgba(91,140,255,.12))}
+  button.gefahr{color:#ffc2c2; border-color:rgba(255,110,110,.32);
+    background:linear-gradient(160deg,rgba(255,80,80,.14),rgba(255,80,80,.04))}
 
-  #status{
-    margin-top:16px; min-height:0; font-size:13.5px; color:var(--gut);
-    opacity:0; transform:translateY(-3px); transition:opacity .2s, transform .2s;
-  }
+  #status{margin-top:16px; font-size:13.5px; color:var(--gut); opacity:0; transform:translateY(-4px);
+    transition:opacity .22s, transform .22s}
   #status.an{opacity:1; transform:none}
-  footer{margin-top:30px; color:#596071; font-size:12.5px; line-height:1.7}
-  code{background:#101319; border:1px solid var(--linie); padding:1px 6px; border-radius:5px;
-    font:12px/1.4 ui-monospace,Consolas,monospace; color:#b9c2d4}
+  footer{margin-top:22px; color:var(--fein); font-size:12.5px; line-height:1.75}
+  footer b{color:#c9d2e2; font-weight:600}
+  a{color:#8fb3ff; text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{background:rgba(6,8,12,.6); border:1px solid var(--rand); padding:2px 7px; border-radius:6px;
+    font:12px/1.4 ui-monospace,Consolas,monospace; color:#aeb8cc}
 </style></head>
-<body><div class="wrap">
+<body>
+<div class="himmel"></div><div class="korn"></div>
+<div class="wrap">
 
 <header class="kopf">
-  <div class="marke">
-    <div class="logo"><i></i><i></i><i></i><i></i></div>
-    <div>
-      <h1>RAM-Tetris</h1>
-      <p class="unter">Farben, Sondersequenzen und Tempo. Alles was du hier einstellst, landet in
-        <code>einstellungen.json</code> und gilt ab dem nächsten Start.</p>
-    </div>
+  <div class="logo"><i></i><i></i><i></i><i></i></div>
+  <div>
+    <h1>RAM-Tetris</h1>
+    <p class="unter">Lighting Control — Farben, Sequenzen und Takt. Gespeichert in
+      <code>einstellungen.json</code>, aktiv ab dem nächsten Start.</p>
   </div>
+  <div class="badge">iCUE SDK</div>
 </header>
 
 <section class="karte">
-  <h2>Farben der Formen</h2>
+  <h2>Piece Colors <span>die vier Farben der fallenden Formen</span></h2>
   <div class="farben" id="palette"></div>
 </section>
 
 <section class="karte">
-  <h2>Verloren und Putzen</h2>
-  <div class="farben" id="sondersequenzen"></div>
+  <h2>Sequences <span>was beim Verlieren und beim Aufräumen passiert</span></h2>
+  <div class="farben" id="sequenzen"></div>
 </section>
 
 <section class="karte">
-  <h2>Vorschau</h2>
+  <h2>Live Preview <span>10 Reihen × 4 Spalten, ein Riegel je Spalte</span></h2>
   <div class="vorschau-karte">
-    <div class="brett" id="brett"></div>
+    <div class="bretter"><div class="brett" id="brett"></div></div>
     <div class="legende">
-      So sieht das Feld aus: <b>10 Reihen × 4 Spalten</b>, jeder Riegel eine Spalte.
-      Oben fallen die Formen hinein, drei gleiche Farben waagerecht oder senkrecht verschwinden.<br><br>
-      Ist eine Spalte voll, blinkt alles in der Farbe <b>Verloren-Blitz</b>, danach laufen die
-      <b>Putz-Wellen</b> durch und es beginnt von vorn.
+      Drei gleiche Farben waagerecht oder senkrecht <b>match &amp; clear</b>. Volle Spalte heisst
+      <b>Game Over</b>: erst der Flash, dann der <b>Cleanup Sweep</b>, dann neu.
     </div>
   </div>
 </section>
 
 <section class="karte">
-  <h2>Beliebte Paletten</h2>
+  <h2>Presets <span>ein Klick setzt alle vier Formfarben</span></h2>
   <div class="chips" id="chips"></div>
 </section>
 
 <section class="karte">
-  <h2>Tempo</h2>
+  <h2>Speed <span>Fall und Wiedergabe</span></h2>
   <div class="zahlen">
-    <div class="feld">
-      <label>Bilder je Sekunde</label>
+    <div class="feld"><label>Frames per second</label>
       <input type="number" id="fps" min="1" max="10" step="1">
-      <small>höher = schneller</small>
-    </div>
-    <div class="feld">
-      <label>Wiedergabe</label>
+      <small>höher = schneller</small></div>
+    <div class="feld"><label>Playback</label>
       <input type="number" id="speed" min="0.5" max="4" step="0.5">
-      <small>2 = doppelt so schnell</small>
-    </div>
+      <small>2 = doppelt so schnell</small></div>
   </div>
 </section>
 
 <section class="karte">
-  <h2>Installation</h2>
+  <h2>Deploy <span>installieren, ausprobieren, entfernen</span></h2>
   <div class="leiste">
-    <button class="aktion haupt" onclick="speichern()">Speichern</button>
-    <button class="aktion" onclick="aktion('probelauf')">Kurz zeigen</button>
-    <button class="aktion hinweis" onclick="aktion('installieren')">Installieren</button>
-    <button class="aktion gefahr" onclick="aktion('entfernen')">Entfernen</button>
+    <button class="aktion haupt" onclick="speichern()">Save</button>
+    <button class="aktion" onclick="aktion('probelauf')">Preview Run</button>
+    <button class="aktion deploy" onclick="aktion('installieren')">Deploy</button>
+    <button class="aktion gefahr" onclick="aktion('entfernen')">Remove</button>
   </div>
   <div id="status"></div>
   <footer>
-    <b>Installieren</b> legt <code>start.cmd</code> an, setzt eine Verknüpfung in den
-    Autostart-Ordner und startet das Spiel — ab dann läuft es bei jeder Anmeldung.<br>
-    <b>Entfernen</b> nimmt beides zurück und beendet das Spiel; iCUE steuert die Riegel danach wieder.
-    <br><br>Projekt: <a href="https://github.com/lanlibbi/ram-tetris" target="_blank" rel="noopener">github.com/lanlibbi/ram-tetris</a>
+    <b>Deploy</b> legt <code>start.cmd</code> an, setzt eine Verknüpfung in den Autostart und startet
+    das Spiel. <b>Remove</b> nimmt beides zurück und beendet es — danach steuert iCUE wieder.<br><br>
+    <a href="https://github.com/lanlibbi/ram-tetris" target="_blank" rel="noopener">github.com/lanlibbi/ram-tetris</a>
   </footer>
 </section>
 
 </div>
 <script>
-const NAMEN = ["Form 1","Form 2","Form 3","Form 4"];
-// Grobe Farbnamen, damit unter der Kachel nicht nur "Form 2" steht
-function farbname(c){
-  const [r,g,b] = c.map(k => k/255);
-  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
-  if (max < 0.12) return "Schwarz";
-  if (d < 0.10) return max > 0.86 ? "Weiß" : (max > 0.45 ? "Grau" : "Dunkelgrau");
-  let h = 0;
-  if (max === r) h = ((g-b)/d) % 6; else if (max === g) h = (b-r)/d + 2; else h = (r-g)/d + 4;
-  h = (h*60+360)%360;
-  const hell = max > 0.85 && d < 0.35;
-  if (h < 15 || h >= 345) return hell ? "Hellrot" : "Rot";
-  if (h < 40) return hell ? "Orange" : "Orange";
-  if (h < 70) return max > 0.8 ? "Gelb" : "Oliv";
-  if (h < 160) return max > 0.8 ? "Grün" : "Dunkelgrün";
-  if (h < 200) return hell ? "Türkis" : "Petrol";
-  if (h < 250) return max > 0.8 ? "Hellblau" : "Dunkelblau";
-  if (h < 290) return "Violett";
-  return hell ? "Rosa" : "Magenta";
-}
-const PALETTEN = [
-  {name:"Vorgabe",   p:["#ffd200","#0a28aa","#ff1e1e","#ffffff"]},
-  {name:"Neon",      p:["#39ff14","#00e5ff","#ff00d4","#fff9b0"]},
-  {name:"Eis",       p:["#7fd4ff","#2b6df6","#b6f0ff","#ffffff"]},
-  {name:"Glut",      p:["#ff3b00","#ff9d00","#ffd200","#fff3d6"]},
-  {name:"Gameboy",   p:["#9bbc0f","#8bac0f","#306230","#e0f8d0"]},
-  {name:"Mitternacht",p:["#4c8dff","#8b5cf6","#22d3ee","#e9ecf2"]}
+const ROLLEN = ["Piece 01","Piece 02","Piece 03","Piece 04"];
+const PRESETS = [
+  {name:"Default",    p:["#ffd200","#0a28aa","#ff1e1e","#ffffff"]},
+  {name:"Neon",       p:["#39ff14","#00e5ff","#ff00d4","#fff9b0"]},
+  {name:"Arctic",     p:["#7fd4ff","#2b6df6","#b6f0ff","#ffffff"]},
+  {name:"Ember",      p:["#ff3b00","#ff9d00","#ffd200","#fff3d6"]},
+  {name:"Gameboy",    p:["#9bbc0f","#8bac0f","#306230","#e0f8d0"]},
+  {name:"Midnight",   p:["#4c8dff","#8b5cf6","#22d3ee","#e9ecf2"]}
 ];
 let daten = __DATEN__;
 
 const hex = c => '#' + c.map(k => k.toString(16).padStart(2,'0')).join('');
 const vonHex = h => [1,3,5].map(i => parseInt(h.substr(i,2),16));
 
-function kachel(id, titel, farbe, beiAenderung, extraKlasse){
+function farbname(c){
+  const [r,g,b] = c.map(k => k/255);
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+  if (max < 0.12) return "Black";
+  if (d < 0.10) return max > 0.86 ? "White" : (max > 0.45 ? "Grey" : "Charcoal");
+  let h = 0;
+  if (max === r) h = ((g-b)/d) % 6; else if (max === g) h = (b-r)/d + 2; else h = (r-g)/d + 4;
+  h = (h*60+360)%360;
+  const hell = max > 0.82 && d < 0.40;
+  if (h < 15 || h >= 345) return hell ? "Rose" : "Red";
+  if (h < 40) return hell ? "Coral" : "Orange";
+  if (h < 70) return max > 0.78 ? "Amber" : "Olive";
+  if (h < 160) return max > 0.78 ? "Mint" : "Forest";
+  if (h < 200) return hell ? "Ice" : "Teal";
+  if (h < 250) return max > 0.78 ? "Sky" : "Navy";
+  if (h < 290) return "Violet";
+  return hell ? "Pink" : "Magenta";
+}
+
+function kachel(titel, farbe, beiAenderung, extra){
   const b = document.createElement('button');
-  b.className = 'kachel' + (extraKlasse ? ' ' + extraKlasse : '');
+  b.className = 'kachel' + (extra ? ' ' + extra : '');
   b.type = 'button';
   b.innerHTML = `<div class="farbe" style="background:${hex(farbe)}">
+      <span class="glasrand"></span>
       <span class="hex">${hex(farbe).slice(1).toUpperCase()}</span>
       <input type="color" value="${hex(farbe)}" aria-label="${titel}">
-    </div><div class="name">${titel} · ${farbname(farbe)}</div>`;
+    </div>
+    <div class="name"><b>${titel}</b><i>${farbname(farbe)}</i></div>`;
   const eingabe = b.querySelector('input');
   eingabe.addEventListener('input', e => {
     const neu = vonHex(e.target.value);
     beiAenderung(neu);
     b.querySelector('.farbe').style.background = e.target.value;
     b.querySelector('.hex').textContent = e.target.value.slice(1).toUpperCase();
-    b.querySelector('.name').textContent = titel + ' · ' + farbname(neu);
+    b.querySelector('.name i').textContent = farbname(neu);
     vorschauBrett();
   });
   b.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') eingabe.click(); });
-  if (id) b.id = id;
   return b;
 }
 
@@ -319,20 +350,21 @@ function baue(){
   const p = document.getElementById('palette');
   p.innerHTML = '';
   daten.palette.forEach((c,i) => p.appendChild(
-    kachel('k'+i, NAMEN[i] || ('Form '+(i+1)), c, neu => daten.palette[i] = neu)));
+    kachel(ROLLEN[i] || ('Piece 0' + (i+1)), c, neu => daten.palette[i] = neu)));
 
-  const s = document.getElementById('sondersequenzen');
+  const s = document.getElementById('sequenzen');
   s.innerHTML = '';
-  s.appendChild(kachel(null, 'Verloren-Blitz', daten.verloren, neu => daten.verloren = neu));
-  s.appendChild(kachel(null, 'Putz-Wellen', daten.welle, neu => daten.welle = neu, 'welle'));
+  s.appendChild(kachel('Game Over Flash', daten.verloren, neu => daten.verloren = neu, 'flash'));
+  s.appendChild(kachel('Cleanup Sweep', daten.welle, neu => daten.welle = neu, 'sweep'));
 
   const chips = document.getElementById('chips');
   chips.innerHTML = '';
-  PALETTEN.forEach(v => {
+  PRESETS.forEach(v => {
     const c = document.createElement('button');
     c.className = 'chip';
     c.type = 'button';
-    c.innerHTML = v.p.map(f => `<i style="background:${f}"></i>`).join('') + `<span>${v.name}</span>`;
+    c.innerHTML = v.p.map(f => `<i style="background:${f};color:${f}"></i>`).join('') +
+                  `<span>${v.name}</span>`;
     c.onclick = () => { daten.palette = v.p.map(vonHex); baue(); vorschauBrett(); };
     chips.appendChild(c);
   });
@@ -349,8 +381,10 @@ function vorschauBrett(){
   brett.innerHTML = '';
   muster.forEach((k,i) => {
     const s = document.createElement('span');
-    const leer = i < 8;                 // oben ein paar Lücken wie im Spiel
-    if (!leer) s.style.background = hex(f[k % f.length]);
+    if (i >= 8){
+      s.style.background = hex(f[k % f.length]);
+      s.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.35), 0 0 10px ' + hex(f[k % f.length]) + '55';
+    }
     brett.appendChild(s);
   });
 }
@@ -403,7 +437,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(roh)
 
     def do_GET(self) -> None:      # noqa: N802
-        if self.path in ("/", "/index.html"):
+        pfad = self.path.split("?", 1)[0]
+        if pfad in ("/", "/index.html"):
             roh = seite()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
