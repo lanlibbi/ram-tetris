@@ -57,6 +57,9 @@ FORMEN = {
     "T":     [(0, 0), (0, 1), (0, 2), (1, 1)],
     "Punkt": [(0, 0)],
 }
+# Wird beim Start überschrieben, wenn --palette angegeben ist.
+PALETTE_AKTIV = PALETTE
+
 # Gewichtung: kleine Formen häufiger, sonst läuft das schmale Feld zu schnell voll.
 FORMEN_GEWICHT = ["I2", "I2", "I3", "L", "L", "J", "J", "O", "T", "S", "Punkt", "Punkt"]
 
@@ -271,7 +274,7 @@ class HardwareIcue:
 # ASCII-Vorschau
 # ---------------------------------------------------------------------------
 def ascii_bild(feld: Feld, hinweis: str = "") -> str:
-    zeichen = {farbe: buchstabe for buchstabe, farbe in PALETTE}
+    zeichen = {farbe: buchstabe for buchstabe, farbe in PALETTE_AKTIV}
     zeilen = ["".join(zeichen.get(z, "?") if z else "." for z in reihe) for reihe in feld.gitter]
     return (f"[{hinweis}] " if hinweis else "") + "  /  ".join(zeilen)
 
@@ -282,7 +285,7 @@ def ascii_bild(feld: Feld, hinweis: str = "") -> str:
 class Spiel:
     def __init__(self, reihen: int, spalten: int, farbzahl: int, rng: random.Random, still: bool = False):
         self.feld = Feld(reihen, spalten)
-        self.palette = PALETTE[:farbzahl]
+        self.palette = PALETTE_AKTIV[:farbzahl] if farbzahl else PALETTE_AKTIV
         self.rng = rng
         self.still = still
         self.frames: list[dict] = []
@@ -497,6 +500,8 @@ def main() -> int:
     p.add_argument("--reihen", type=int, default=2)
     p.add_argument("--spalten", type=int, default=0, help="0 = aus den LEDs ableiten")
     p.add_argument("--farben", type=int, default=4, help="Anzahl Farben aus der Palette")
+    p.add_argument("--palette", metavar="RRGGBB,RRGGBB,...",
+                   help="eigene Farben, mit Komma getrennt (überschreibt --farben)")
     p.add_argument("--fps", type=float, default=6.0)
     p.add_argument("--steine", type=int, default=60, help="nur bei --simulate: Anzahl Steine")
     p.add_argument("--probe", action="store_true")
@@ -513,6 +518,22 @@ def main() -> int:
                    help="nach N abgeschlossenen Runden aufhören (0 = endlos) — für eine Schleife, "
                         "die auch Verloren-Animation und Wischen enthält")
     args = p.parse_args()
+
+    # Eigene Farben von der Kommandozeile: "FFD200,0A28AA,FF1E1E,FFFFFF"
+    palette = PALETTE
+    if args.palette:
+        roh = [t.strip().lstrip("#") for t in args.palette.replace(";", ",").split(",") if t.strip()]
+        eigene = []
+        for i, hexwert in enumerate(roh):
+            if len(hexwert) != 6:
+                raise SystemExit(f"Farbe {hexwert!r} ist keine RRGGBB-Angabe.")
+            farbe = tuple(int(hexwert[j:j + 2], 16) for j in (0, 2, 4))
+            eigene.append((chr(ord("A") + i % 26), farbe))
+        if len(eigene) < 2:
+            raise SystemExit("Mindestens zwei Farben angeben.")
+        palette = eigene
+    global PALETTE_AKTIV
+    PALETTE_AKTIV = palette
 
     if args.probe:
         hardware = mache_hardware(args)
@@ -542,8 +563,8 @@ def main() -> int:
     hardware = None if args.simulate else mache_hardware(args)
     spalten = args.spalten or (hardware.spalten if hardware else 4)
     reihen = hardware.reihen if hardware else args.reihen
-    spiel = Spiel(reihen, spalten, max(2, min(args.farben, len(PALETTE))),
-                  random.Random(args.seed), still=False)
+    anzahl = len(PALETTE_AKTIV) if args.palette else max(2, min(args.farben, len(PALETTE_AKTIV)))
+    spiel = Spiel(reihen, spalten, anzahl, random.Random(args.seed), still=False)
     spiel.aufzeichnen = bool(args.record)
     takt = 1.0 / args.fps
     print(f"Feld: {reihen} Reihen × {spalten} Spalten, {len(spiel.palette)} Farben. "
