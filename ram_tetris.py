@@ -401,13 +401,22 @@ class Spiel:
         for _ in range(3):
             self._zeigen(hardware, [[ROT] * self.feld.spalten for _ in self.feld.gitter], "vorbei", takt * 2)
             self._zeigen(hardware, self._leer(), "", takt * 0.6)
-        # 2. Reset: eine weiße Welle wischt von oben nach unten alles ab
+        # 2. Reset, erster Durchgang: weiße Welle wischt von oben nach unten.
+        #    Tempo auf Wunsch verdoppelt (13.11.2026) — der Wisch soll sichtbar arbeiten.
         for grenze in range(self.feld.reihen + 2):
             bild = self._leer()
             for r in range(grenze - 1, self.feld.reihen):
                 bild[r] = [WEISS] * self.feld.spalten
-            self._zeigen(hardware, bild, "wischen", takt * 0.5)
-        self._zeigen(hardware, self._leer(), "leer", takt)
+            self._zeigen(hardware, bild, "wischen-senkrecht", takt * 1.2)
+        # 3. Reset, zweiter Durchgang: waagerecht von links nach rechts (Wunsch 13.11.2026)
+        for grenze in range(self.feld.spalten + 2):
+            bild = self._leer()
+            for s in range(grenze - 1, self.feld.spalten):
+                for r in range(self.feld.reihen):
+                    bild[r][s] = WEISS
+            self._zeigen(hardware, bild, "wischen-quer", takt * 1.2)
+        # 4. Kurz dunkel bleiben, bevor die neue Runde beginnt
+        self._zeigen(hardware, self._leer(), "pause", takt * 8)
         if not self.still:
             print(f"--- Runde vorbei: {self.steine} Steine, {self.punkte} Punkte, "
                   f"{self.serien} Ketten — neu ---")
