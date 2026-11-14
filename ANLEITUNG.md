@@ -188,3 +188,32 @@ läuft. Der Autopilot würfelt nicht, sondern sucht:
 
 Fehlt der Block, gelten die Vorgaben; der Verlorenton wird dann aus `verloren` übernommen.
 
+## 7. Spiel wählen, Snake-Farben — alles im Dashboard
+
+Seit dem Umbau gibt es **einen** Starter und **einen** Ort für die Einstellungen. Die Karte
+**Now Playing** oben im Dashboard schaltet um:
+
+| Knopf | Wirkung |
+|---|---|
+| **Tetris** | beendet Snake, startet die Endlosschleife von Tetris |
+| **Snake** | beendet Tetris, startet Snake (spielt sich selbst) |
+| **Off** | beendet beides, iCUE steuert die Riegel wieder |
+
+Immer nur eins — beide Spiele schreiben auf dieselben 40 LEDs.
+
+Die Karte **Snake** setzt die Farben für **Kopf**, **Körper** und **Futter** sowie die Züge je
+Sekunde. **Verloren-Blitz** und **Cleanup Sweep** stehen bei den **Sequences** und gelten für beide
+Spiele; Snake nutzt also denselben roten Verloren-Screen und denselben weissen Putzlauf wie Tetris.
+
+Gespeichert wird in `einstellungen.json`:
+
+```json
+"snake": {"kopf": [255,214,0], "koerper": [0,190,110], "futter": [255,45,45], "fps": 6},
+"modus": "snake"
+```
+
+**Wie das Umschalten funktioniert:** die Windows-Aufgabe `RamLoop` ruft `run.cmd` auf, das
+`spielen.py` startet. `spielen.py` liest `einstellungen.json` und startet danach das passende
+Spiel. Deshalb hat die Aufgabe eine feste Kommandozeile und muss beim Umschalten nur neu gestartet
+werden — Farben und Tempo gelten ab dem nächsten Start.
+

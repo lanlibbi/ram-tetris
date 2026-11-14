@@ -34,7 +34,34 @@ VORGABE = {
     "welle": [255, 255, 255],
     "fps": 3,
     "speed": 2,
+    # Snake: eigene Farben, Verloren und Putzen teilt es mit Tetris
+    "snake": {"kopf": [255, 214, 0], "koerper": [0, 190, 110],
+              "futter": [255, 45, 45], "fps": 6},
+    # welches Spiel laeuft gerade: "tetris", "snake" oder "aus"
+    "modus": "tetris",
 }
+
+# Eine Windows-Aufgabe startet, was im Dashboard gewählt ist (spielen.py liest die Wahl).
+AUFGABE = "RamLoop"
+ALTE_AUFGABEN = ["RamTetrisLoop", "RamSnakeLoop"]
+# Prozessmuster, an denen ein laufendes Spiel erkannt wird (das Einstellungsfenster
+# selbst heisst einstellungen.py und darf NICHT mit erwischt werden)
+SPIEL_MUSTER = ["*ram_tetris*", "*snake.py*"]
+
+
+def _rufe(befehl: list[str], text: bool = False):
+    """Externen Befehl aufrufen und Fehlen tolerieren.
+
+    Auf Windows gibt es schtasks, auf Linux nicht — das Einstellungsfenster soll trotzdem
+    antworten statt mit einem Stapelabzug zu sterben.
+    """
+    try:
+        return subprocess.run(befehl, capture_output=True, text=text)
+    except FileNotFoundError:
+        class _Fehlt:
+            returncode = 127
+            stdout = stderr = ""
+        return _Fehlt()
 
 
 def lade() -> dict:
@@ -45,6 +72,11 @@ def lade() -> dict:
             for schluessel in daten:
                 if schluessel in gelesen:
                     daten[schluessel] = gelesen[schluessel]
+            # Unterschlüssel ergänzen, die in einer älteren Datei fehlen
+            for schluessel, vorgabe in VORGABE.items():
+                if isinstance(vorgabe, dict) and isinstance(daten.get(schluessel), dict):
+                    for unterschluessel, wert in vorgabe.items():
+                        daten[schluessel].setdefault(unterschluessel, wert)
         except Exception:
             pass
     return daten
@@ -62,7 +94,7 @@ def hexwert(farbe) -> str:
 SEITE = """<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RAM-Tetris — Lighting Control</title>
+<title>RAM Games — Lighting Control</title>
 <style>
   :root{
     color-scheme: dark;
@@ -207,9 +239,15 @@ SEITE = """<!doctype html>
     box-shadow:0 18px 40px -20px #5b8cff99, inset 0 1px 0 #ffffff66}
   button.deploy{border-color:rgba(168,85,247,.45); color:#e6d4ff;
     background:linear-gradient(160deg,rgba(168,85,247,.22),rgba(91,140,255,.12))}
+  button.modus-knopf.aktiv{border-color:rgba(91,140,255,.65); color:#fff;
+    background:linear-gradient(135deg,rgba(91,140,255,.45),rgba(168,85,247,.30));
+    box-shadow:0 14px 34px -18px #5b8cff, inset 0 1px 0 #ffffff55}
   button.gefahr{color:#ffc2c2; border-color:rgba(255,110,110,.32);
     background:linear-gradient(160deg,rgba(255,80,80,.14),rgba(255,80,80,.04))}
 
+  #modus-status{margin-top:14px; font-size:13.5px; color:#9fc0ff; opacity:0;
+    transform:translateY(-4px); transition:opacity .22s, transform .22s}
+  #modus-status.an{opacity:1; transform:none}
   #status{margin-top:16px; font-size:13.5px; color:var(--gut); opacity:0; transform:translateY(-4px);
     transition:opacity .22s, transform .22s}
   #status.an{opacity:1; transform:none}
@@ -228,11 +266,25 @@ SEITE = """<!doctype html>
   <div class="logo"><i></i><i></i><i></i><i></i></div>
   <div>
     <h1>RAM-Tetris</h1>
-    <p class="unter">Lighting Control — Farben, Sequenzen und Takt. Gespeichert in
+    <p class="unter">Lighting Control — Tetris und Snake. Farben, Sequenzen und Takt, gespeichert in
       <code>einstellungen.json</code>, aktiv ab dem nächsten Start.</p>
   </div>
   <div class="badge">iCUE SDK</div>
 </header>
+
+<section class="karte">
+  <h2>Now Playing <span>welches Spiel auf den Riegeln laufen soll</span></h2>
+  <div class="leiste" id="modus-leiste">
+    <button class="aktion modus-knopf" data-modus="tetris" onclick="modus('tetris')">Tetris</button>
+    <button class="aktion modus-knopf" data-modus="snake" onclick="modus('snake')">Snake</button>
+    <button class="aktion modus-knopf" data-modus="aus" onclick="modus('aus')">Off</button>
+  </div>
+  <footer>
+    Immer nur ein Spiel — beide schreiben auf dieselben LEDs. <b>Off</b> beendet beide, danach
+    steuert iCUE die Riegel wieder.
+  </footer>
+  <div id="modus-status"></div>
+</section>
 
 <section class="karte">
   <h2>Piece Colors <span>die vier Farben der fallenden Formen</span></h2>
@@ -242,6 +294,16 @@ SEITE = """<!doctype html>
 <section class="karte">
   <h2>Sequences <span>was beim Verlieren und beim Aufräumen passiert</span></h2>
   <div class="farben" id="sequenzen"></div>
+</section>
+
+<section class="karte">
+  <h2>Snake <span>Kopf, Körper und Futter · Verloren und Putzen siehe Sequences</span></h2>
+  <div class="farben" id="snake-farben"></div>
+  <div class="zahlen" style="margin-top:20px">
+    <div class="feld"><label>Snake Speed</label>
+      <input type="number" id="snake-fps" min="1" max="20" step="1">
+      <small>Züge je Sekunde</small></div>
+  </div>
 </section>
 
 <section class="karte">
@@ -357,6 +419,14 @@ function baue(){
   s.appendChild(kachel('Game Over Flash', daten.verloren, neu => daten.verloren = neu, 'flash'));
   s.appendChild(kachel('Cleanup Sweep', daten.welle, neu => daten.welle = neu, 'sweep'));
 
+  const sn = document.getElementById('snake-farben');
+  sn.innerHTML = '';
+  if (!daten.snake) daten.snake = {kopf:[255,214,0], koerper:[0,190,110], futter:[255,45,45], fps:6};
+  sn.appendChild(kachel('Snake Head', daten.snake.kopf, neu => daten.snake.kopf = neu));
+  sn.appendChild(kachel('Snake Body', daten.snake.koerper, neu => daten.snake.koerper = neu));
+  sn.appendChild(kachel('Food', daten.snake.futter, neu => daten.snake.futter = neu));
+  document.getElementById('snake-fps').value = daten.snake.fps || 6;
+
   const chips = document.getElementById('chips');
   chips.innerHTML = '';
   PRESETS.forEach(v => {
@@ -371,7 +441,27 @@ function baue(){
 
   document.getElementById('fps').value = daten.fps;
   document.getElementById('speed').value = daten.speed;
+  modusAnzeigen(daten.modus || 'tetris');
   vorschauBrett();
+}
+
+function modusAnzeigen(aktiv){
+  document.querySelectorAll('.modus-knopf').forEach(k => {
+    k.classList.toggle('aktiv', k.dataset.modus === aktiv);
+  });
+  daten.modus = aktiv;
+}
+
+async function modus(was){
+  sammle();
+  await fetch('/speichern',{method:'POST',body:JSON.stringify(daten)});
+  const r = await fetch('/modus',{method:'POST',body:JSON.stringify({modus:was})});
+  modusAnzeigen(was);
+  const s = document.getElementById('modus-status');
+  s.textContent = await r.text();
+  s.classList.add('an');
+  clearTimeout(window._tm);
+  window._tm = setTimeout(() => s.classList.remove('an'), 8000);
 }
 
 function vorschauBrett(){
@@ -392,6 +482,8 @@ function vorschauBrett(){
 function sammle(){
   daten.fps = parseInt(document.getElementById('fps').value,10) || 3;
   daten.speed = parseFloat(document.getElementById('speed').value) || 2;
+  if (!daten.snake) daten.snake = {};
+  daten.snake.fps = parseInt(document.getElementById('snake-fps').value,10) || 6;
 }
 
 function zeige(text){
@@ -467,6 +559,15 @@ class Handler(BaseHTTPRequestHandler):
             self._sende("Probelauf gestartet — im Konsolenfenster mit Strg+C beenden")
             return
 
+        if self.path == "/modus":
+            try:
+                wunsch = (json.loads(koerper or "{}").get("modus") or "").lower()
+            except Exception:
+                self._sende("ungültiger Wunsch", 400)
+                return
+            self._sende(self._spiel_umschalten(wunsch))
+            return
+
         if self.path == "/installieren":
             self._sende(self._installieren())
             return
@@ -478,13 +579,46 @@ class Handler(BaseHTTPRequestHandler):
         self._sende("unbekannte Aktion", 404)
 
     # -- Aktionen -------------------------------------------------------
+    def _spiel_umschalten(self, modus: str) -> str:
+        """Beendet beide Spiele und startet das gewünschte über seine Windows-Aufgabe."""
+        if modus not in ("tetris", "snake", "aus"):
+            return f"unbekannter Spielmodus: {modus!r}"
+
+        daten = lade()
+        daten["modus"] = modus
+        speichere(daten)
+
+        # laufendes Spiel anhalten (auch die früheren Einzelaufgaben)
+        for aufgabe in [AUFGABE] + ALTE_AUFGABEN:
+            _rufe(["schtasks", "/end", "/tn", aufgabe])
+        muster = " -or ".join(f"$_.CommandLine -like '{m}'" for m in SPIEL_MUSTER)
+        _rufe(["powershell", "-NoProfile", "-Command",
+               "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" "
+               f"| Where-Object {{ {muster} }} "
+               "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"])
+
+        if modus == "aus":
+            return "beide Spiele beendet — iCUE steuert die Riegel wieder"
+
+        pruefung = _rufe(["schtasks", "/query", "/tn", AUFGABE], text=True)
+        if pruefung.returncode != 0:
+            # Aufgabe fehlt (frischer Rechner): direkt starten, dann läuft es bis zum Abmelden
+            subprocess.Popen([PYTHON, os.path.join(HIER, "spielen.py")], cwd=HIER,
+                             creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+            return f"{modus} gestartet (Aufgabe {AUFGABE} fehlt, läuft direkt)"
+
+        start = _rufe(["schtasks", "/run", "/tn", AUFGABE], text=True)
+        if start.returncode != 0:
+            return f"{AUFGABE} konnte nicht gestartet werden: {start.stdout.strip() or start.stderr.strip()}"
+        return f"{modus} läuft — Aufgabe {AUFGABE} gestartet"
+
     def _installieren(self) -> str:
         daten = lade()
         with open(START_CMD, "w", encoding="utf-8", newline="\r\n") as fh:
             fh.write("@echo off\n")
             fh.write("rem Autostart für RAM-Tetris — von einstellungen.py erzeugt\n")
             fh.write('cd /d "%~dp0"\n')
-            fh.write(f'"{PYTHON}" ram_tetris.py --replay "{AUFNAHME}" --loop --speed {daten.get("speed", 2)}\n')
+            fh.write(f'"{PYTHON}" spielen.py\n')
         teile = ["start.cmd angelegt"]
         if STARTUP:
             ps = ("$w = New-Object -ComObject WScript.Shell; "
@@ -519,6 +653,7 @@ def main() -> int:
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     adresse = f"http://127.0.0.1:{PORT}/"
     print(f"RAM-Tetris Einstellungen: {adresse}")
+    print("Spielmodus laut Einstellungen:", lade().get("modus", "tetris"))
     print("Beenden mit Strg+C.")
     threading.Timer(0.6, lambda: webbrowser.open(adresse)).start()
     try:
