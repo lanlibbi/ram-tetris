@@ -107,6 +107,10 @@ editing the file:
 Colours are three numbers 0–255 (red, green, blue). `verloren` and `welle` are shared by all
 games. `modus` is what runs: `tetris`, `snake`, `pong`, `invaders` or `aus` (off).
 
+The repository carries **`einstellungen.beispiel.json`** with exactly these defaults — copy it to
+`einstellungen.json` to start from them. If the file is missing, every game falls back to the same
+values, so nothing breaks; the settings page writes the file on the first **Save**.
+
 Only one game runs at a time — they all write to the same 40 LEDs.
 
 ## 6. Autostart: Deploy and Remove

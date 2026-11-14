@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 state.json
 ram-tetris-vorschau.png
+einstellungen.json
+ram-log.txt
+ram-ausgabe.txt
+spielen.lock
