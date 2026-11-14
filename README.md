@@ -1,8 +1,8 @@
 # RAM Games
 
 Four games for the RGB LEDs on your memory modules — **Tetris**, **Snake**, **Pong** and
-**Space Invaders** — drawn through the iCUE SDK that already ships with your Corsair installation.
-Nothing to install, no extra driver, no OpenRGB.
+**Space Invaders** — drawn through the iCUE SDK, the DLL that comes with Corsair iCUE or with a
+mainboard vendor tool. Nothing extra to install, no additional driver, no OpenRGB.
 
 *Vier Spiele für die RGB-LEDs der Arbeitsspeicher-Riegel. Deutsche Fassung weiter unten:
 [Deutsch](#deutsch).*
@@ -93,8 +93,9 @@ MIT. Model was the short "Mein RAM spielt Tetris, ganz ohne mich" by **Bastel Ne
 ## Deutsch
 
 Vier Spiele für die RGB-LEDs der Arbeitsspeicher-Riegel: **Tetris**, **Snake**, **Pong** und
-**Space Invaders**. Sie laufen über die iCUE-SDK-DLL, die mit der Corsair-Software ohnehin auf dem
-Rechner liegt — keine Installation, kein zusätzlicher Treiber, kein OpenRGB.
+**Space Invaders**. Sie laufen über die iCUE-SDK-DLL — die Datei kommt mit Corsair iCUE oder mit einem
+Mainboard-Hersteller-Werkzeug auf den Rechner. Keine zusätzliche Installation, kein weiterer Treiber,
+kein OpenRGB.
 
 **Voraussetzung: iCUE (4 oder 5) installiert und gestartet.** Die Spiele setzen Farben nur über die
 SDK von iCUE; sie sprechen nicht selbst mit den Riegeln. Ohne iCUE passiert auf den LEDs nichts.
