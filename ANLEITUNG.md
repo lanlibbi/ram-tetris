@@ -154,3 +154,37 @@ Formen (O, I2, I3, L, J, S, T) fallen von oben in die Spalten. Drei gleiche Farb
 senkrecht verschwinden, der Rest rutscht nach. Ist eine Leiste bis oben zugebaut, ist die Runde
 verloren: alles blinkt rot, danach wischen drei weiße Wellen das Feld sauber (senkrecht, dann
 waagerecht hin und zurück), und es geht von vorn los.
+
+## 6. Snake — das zweite Spiel
+
+Dasselbe Feld, dieselbe Technik, andere Logik: statt fallender Steine eine Schlange, die sich
+selbst spielt. Bedienung gibt es keine — es gibt keine Tastatur am RAM.
+
+```
+snake.cmd                  Doppelklick: spielt los (Strg+C beendet)
+snake.cmd --fps 8          schneller
+snake.cmd --sekunden 60    nach einer Minute aufhören
+snake.cmd --probe          zeigt nur, was die Hardware meldet
+python snake.py --simulate nur ASCII im Terminal, ohne LEDs
+```
+
+**Warum spielt es sich selbst?** Weil man an den RAM-Riegeln nicht herankommt, während der Rechner
+läuft. Der Autopilot würfelt nicht, sondern sucht:
+
+1. nur Züge, die nicht in die Wand oder in den eigenen Körper führen,
+2. davon die, nach denen das Futter noch erreichbar bleibt,
+3. unter denen den Zug mit dem meisten freien Platz (Flutfüllung) — sonst sperrt sich die Schlange
+   in der schmalen 4-Spalten-Ecke selbst ein,
+4. bei Gleichstand: der Zug, der näher ans Futter führt.
+
+Über 4.000 Züge gemessen: bis zu 28 von 40 LEDs Länge, gelegentliche Tode, danach Neustart.
+
+**Farben** stehen in `einstellungen.json` unter `snake`:
+
+```json
+"snake": {"kopf": [255, 214, 0], "koerper": [0, 190, 110],
+          "futter": [255, 45, 45], "tod": [255, 20, 20]}
+```
+
+Fehlt der Block, gelten die Vorgaben; der Verlorenton wird dann aus `verloren` übernommen.
+
