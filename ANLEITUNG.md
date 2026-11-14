@@ -250,3 +250,21 @@ die DLL mit einer Zugriffsverletzung beendet — nicht nachmachen.
 `wscript` haben keine Konsole, und `run.cmd` wird mit Fensterstil 0 gestartet. Nachgeprüft: alle
 Prozesse der Kette melden Fenstergriff 0.
 
+## 9. Reiter statt Farbwüste
+
+Die Farbkarte zeigt nur noch die Palette des Spiels, das gerade gewählt ist. Der Umschalter ist
+gleichzeitig Spielwahl und Reiter:
+
+| Reiter | Wirkung |
+|---|---|
+| **Tetris** | startet Tetris und zeigt Piece 01–04, Presets, FPS und Playback |
+| **Snake** | startet Snake und zeigt Kopf, Körper, Futter und Züge je Sekunde |
+| **Off** | beendet beide Spiele; die zuletzt offene Palette bleibt sichtbar |
+
+**Game Over Flash** und **Cleanup Sweep** liegen unter beiden Reitern, weil sie für beide Spiele
+gelten — sie stehen deshalb nur einmal auf der Seite. Die Live-Vorschau wechselt mit dem Reiter:
+bei Snake zeigt sie Kopf, Körper, Futter, bei Tetris das Spielfeld.
+
+Ein weiteres Spiel (Pong, Game of Life, …) braucht damit nur drei Dinge: ein Skript, einen Eintrag
+in `spielen.py` und einen Reiter mit seinem Farbblock.
+

@@ -259,6 +259,30 @@ SEITE = """<!doctype html>
   a:hover{text-decoration:underline}
   code{background:rgba(6,8,12,.6); border:1px solid var(--rand); padding:2px 7px; border-radius:6px;
     font:12px/1.4 ui-monospace,Consolas,monospace; color:#aeb8cc}
+  /* Reiter: ein Umschalter für Spiel und Palette */
+  .reiter{display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+    padding:6px; border-radius:15px; border:1px solid var(--rand);
+    background:rgba(6,8,12,.42); backdrop-filter:blur(14px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  .reiter button{font:inherit; font-weight:560; padding:11px 19px; border-radius:10px; cursor:pointer;
+    border:1px solid transparent; color:#c3ccdd; background:none;
+    transition:color .15s, background .15s, border-color .15s, box-shadow .15s}
+  .reiter button:hover{color:#fff; background:rgba(255,255,255,.06)}
+  .reiter button.aktiv{color:#fff; border-color:rgba(255,255,255,.26);
+    background:linear-gradient(135deg,#5b8cff,#a855f7);
+    box-shadow:0 12px 26px -16px #5b8cff, inset 0 1px 0 rgba(255,255,255,.45)}
+  .reiter .trenner{flex:1}
+  .reiter button.aus{color:#ffc2c2; border-color:rgba(255,110,110,.28)}
+  .reiter button.aus.aktiv{background:linear-gradient(135deg,rgba(255,90,90,.55),rgba(255,60,60,.32));
+    border-color:rgba(255,140,140,.5)}
+  .reiter .hinweis{font-size:12px; color:var(--fein); padding-right:8px}
+  .panel{display:none; margin-top:20px}
+  .panel.aktiv{display:block}
+  .teiler{margin:22px 0 18px; height:1px; background:linear-gradient(90deg,rgba(255,255,255,.14),transparent)}
+  .teiler-text{display:flex; align-items:center; gap:12px; margin:22px 0 16px;
+    font-size:11.5px; letter-spacing:.13em; text-transform:uppercase; color:#8f9ab0}
+  .teiler-text span{color:#69707f; letter-spacing:.02em; text-transform:none; font-size:12px}
+  .teiler-text::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,.14),transparent)}
 </style></head>
 <body>
 <div class="himmel"></div><div class="korn"></div>
@@ -269,70 +293,62 @@ SEITE = """<!doctype html>
   <div>
     <h1>RAM-Tetris</h1>
     <p class="unter">Lighting Control — Tetris und Snake. Farben, Sequenzen und Takt, gespeichert in
-      <code>einstellungen.json</code>, aktiv ab dem nächsten Start.</p>
+      <code>einstellungen.json</code>.</p>
   </div>
   <div class="badge">iCUE SDK</div>
 </header>
 
 <section class="karte">
-  <h2>Now Playing <span>welches Spiel auf den Riegeln laufen soll</span></h2>
-  <div class="leiste" id="modus-leiste">
-    <button class="aktion modus-knopf" data-modus="tetris" onclick="modus('tetris')">Tetris</button>
-    <button class="aktion modus-knopf" data-modus="snake" onclick="modus('snake')">Snake</button>
-    <button class="aktion modus-knopf" data-modus="aus" onclick="modus('aus')">Off</button>
+  <h2>Now Playing <span>der Reiter wählt das Spiel — und zeigt nur dessen Farben</span></h2>
+  <div class="reiter" id="reiter">
+    <button type="button" data-spiel="tetris" onclick="waehle('tetris')">Tetris</button>
+    <button type="button" data-spiel="snake" onclick="waehle('snake')">Snake</button>
+    <span class="trenner"></span>
+    <span class="hinweis">läuft: <b id="laeuft">—</b></span>
+    <button type="button" class="aus" data-spiel="aus" onclick="waehle('aus')">Off</button>
   </div>
-  <footer>
-    Immer nur ein Spiel — beide schreiben auf dieselben LEDs. <b>Off</b> beendet beide, danach
-    steuert iCUE die Riegel wieder.
-  </footer>
   <div id="modus-status"></div>
-</section>
 
-<section class="karte">
-  <h2>Piece Colors <span>die vier Farben der fallenden Formen</span></h2>
-  <div class="farben" id="palette"></div>
-</section>
+  <div class="panel" id="panel-tetris">
+    <div class="teiler-text">Piece Colors <span>die vier Farben der fallenden Formen</span></div>
+    <div class="farben" id="palette"></div>
 
-<section class="karte">
-  <h2>Sequences <span>was beim Verlieren und beim Aufräumen passiert</span></h2>
+    <div class="teiler-text">Presets <span>ein Klick setzt alle vier Formfarben</span></div>
+    <div class="chips" id="chips"></div>
+
+    <div class="teiler-text">Speed <span>Fall und Wiedergabe</span></div>
+    <div class="zahlen">
+      <div class="feld"><label>Frames per second</label>
+        <input type="number" id="fps" min="1" max="10" step="1">
+        <small>höher = schneller</small></div>
+      <div class="feld"><label>Playback</label>
+        <input type="number" id="speed" min="0.5" max="4" step="0.5">
+        <small>2 = doppelt so schnell</small></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-snake">
+    <div class="teiler-text">Snake Colors <span>Kopf, Körper und Futter</span></div>
+    <div class="farben" id="snake-farben"></div>
+
+    <div class="teiler-text">Speed <span>Züge je Sekunde</span></div>
+    <div class="zahlen">
+      <div class="feld"><label>Snake Speed</label>
+        <input type="number" id="snake-fps" min="1" max="20" step="1">
+        <small>höher = schneller</small></div>
+    </div>
+  </div>
+
+  <div class="teiler"></div>
+  <div class="teiler-text">Sequences <span>Game Over und Cleanup gelten für beide Spiele</span></div>
   <div class="farben" id="sequenzen"></div>
 </section>
 
 <section class="karte">
-  <h2>Snake <span>Kopf, Körper und Futter · Verloren und Putzen siehe Sequences</span></h2>
-  <div class="farben" id="snake-farben"></div>
-  <div class="zahlen" style="margin-top:20px">
-    <div class="feld"><label>Snake Speed</label>
-      <input type="number" id="snake-fps" min="1" max="20" step="1">
-      <small>Züge je Sekunde</small></div>
-  </div>
-</section>
-
-<section class="karte">
-  <h2>Live Preview <span>10 Reihen × 4 Spalten, ein Riegel je Spalte</span></h2>
+  <h2>Live Preview <span id="vorschau-titel">10 Reihen × 4 Spalten</span></h2>
   <div class="vorschau-karte">
     <div class="bretter"><div class="brett" id="brett"></div></div>
-    <div class="legende">
-      Drei gleiche Farben waagerecht oder senkrecht <b>match &amp; clear</b>. Volle Spalte heisst
-      <b>Game Over</b>: erst der Flash, dann der <b>Cleanup Sweep</b>, dann neu.
-    </div>
-  </div>
-</section>
-
-<section class="karte">
-  <h2>Presets <span>ein Klick setzt alle vier Formfarben</span></h2>
-  <div class="chips" id="chips"></div>
-</section>
-
-<section class="karte">
-  <h2>Speed <span>Fall und Wiedergabe</span></h2>
-  <div class="zahlen">
-    <div class="feld"><label>Frames per second</label>
-      <input type="number" id="fps" min="1" max="10" step="1">
-      <small>höher = schneller</small></div>
-    <div class="feld"><label>Playback</label>
-      <input type="number" id="speed" min="0.5" max="4" step="0.5">
-      <small>2 = doppelt so schnell</small></div>
+    <div class="legende" id="legende"></div>
   </div>
 </section>
 
@@ -356,14 +372,15 @@ SEITE = """<!doctype html>
 <script>
 const ROLLEN = ["Piece 01","Piece 02","Piece 03","Piece 04"];
 const PRESETS = [
-  {name:"Default",    p:["#ffd200","#0a28aa","#ff1e1e","#ffffff"]},
-  {name:"Neon",       p:["#39ff14","#00e5ff","#ff00d4","#fff9b0"]},
-  {name:"Arctic",     p:["#7fd4ff","#2b6df6","#b6f0ff","#ffffff"]},
-  {name:"Ember",      p:["#ff3b00","#ff9d00","#ffd200","#fff3d6"]},
-  {name:"Gameboy",    p:["#9bbc0f","#8bac0f","#306230","#e0f8d0"]},
-  {name:"Midnight",   p:["#4c8dff","#8b5cf6","#22d3ee","#e9ecf2"]}
+  {name:"Default",  p:["#ffd200","#0a28aa","#ff1e1e","#ffffff"]},
+  {name:"Neon",     p:["#39ff14","#00e5ff","#ff00d4","#fff9b0"]},
+  {name:"Arctic",   p:["#7fd4ff","#2b6df6","#b6f0ff","#ffffff"]},
+  {name:"Ember",    p:["#ff3b00","#ff9d00","#ffd200","#fff3d6"]},
+  {name:"Gameboy",  p:["#9bbc0f","#8bac0f","#306230","#e0f8d0"]},
+  {name:"Midnight", p:["#4c8dff","#8b5cf6","#22d3ee","#e9ecf2"]}
 ];
 let daten = __DATEN__;
+let aktivesSpiel = (daten.modus === "snake") ? "snake" : "tetris";
 
 const hex = c => '#' + c.map(k => k.toString(16).padStart(2,'0')).join('');
 const vonHex = h => [1,3,5].map(i => parseInt(h.substr(i,2),16));
@@ -410,24 +427,29 @@ function kachel(titel, farbe, beiAenderung, extra){
   return b;
 }
 
+function snakeDaten(){
+  if (!daten.snake) daten.snake = {kopf:[255,214,0], koerper:[0,190,110], futter:[255,45,45], fps:6};
+  return daten.snake;
+}
+
 function baue(){
   const p = document.getElementById('palette');
   p.innerHTML = '';
   daten.palette.forEach((c,i) => p.appendChild(
     kachel(ROLLEN[i] || ('Piece 0' + (i+1)), c, neu => daten.palette[i] = neu)));
 
-  const s = document.getElementById('sequenzen');
-  s.innerHTML = '';
-  s.appendChild(kachel('Game Over Flash', daten.verloren, neu => daten.verloren = neu, 'flash'));
-  s.appendChild(kachel('Cleanup Sweep', daten.welle, neu => daten.welle = neu, 'sweep'));
-
   const sn = document.getElementById('snake-farben');
   sn.innerHTML = '';
-  if (!daten.snake) daten.snake = {kopf:[255,214,0], koerper:[0,190,110], futter:[255,45,45], fps:6};
-  sn.appendChild(kachel('Snake Head', daten.snake.kopf, neu => daten.snake.kopf = neu));
-  sn.appendChild(kachel('Snake Body', daten.snake.koerper, neu => daten.snake.koerper = neu));
-  sn.appendChild(kachel('Food', daten.snake.futter, neu => daten.snake.futter = neu));
-  document.getElementById('snake-fps').value = daten.snake.fps || 6;
+  const sd = snakeDaten();
+  sn.appendChild(kachel('Snake Head', sd.kopf, neu => sd.kopf = neu));
+  sn.appendChild(kachel('Snake Body', sd.koerper, neu => sd.koerper = neu));
+  sn.appendChild(kachel('Food', sd.futter, neu => sd.futter = neu));
+  document.getElementById('snake-fps').value = sd.fps || 6;
+
+  const sq = document.getElementById('sequenzen');
+  sq.innerHTML = '';
+  sq.appendChild(kachel('Game Over Flash', daten.verloren, neu => daten.verloren = neu, 'flash'));
+  sq.appendChild(kachel('Cleanup Sweep', daten.welle, neu => daten.welle = neu, 'sweep'));
 
   const chips = document.getElementById('chips');
   chips.innerHTML = '';
@@ -443,24 +465,42 @@ function baue(){
 
   document.getElementById('fps').value = daten.fps;
   document.getElementById('speed').value = daten.speed;
-  modusAnzeigen(daten.modus || 'tetris');
+  anzeigen();
+}
+
+function anzeigen(){
+  document.querySelectorAll('#reiter button[data-spiel]').forEach(b => {
+    b.classList.toggle('aktiv', b.dataset.spiel === aktivesSpiel && b.dataset.spiel !== 'aus');
+  });
+  document.getElementById('panel-tetris').classList.toggle('aktiv', aktivesSpiel === 'tetris');
+  document.getElementById('panel-snake').classList.toggle('aktiv', aktivesSpiel === 'snake');
+  document.getElementById('laeuft').textContent =
+    (daten.modus === 'aus') ? 'nichts' : (daten.modus === 'snake' ? 'Snake' : 'Tetris');
   vorschauBrett();
 }
 
-function modusAnzeigen(aktiv){
-  document.querySelectorAll('.modus-knopf').forEach(k => {
-    k.classList.toggle('aktiv', k.dataset.modus === aktiv);
-  });
-  daten.modus = aktiv;
-}
-
-async function modus(was){
+async function waehle(spiel){
+  if (spiel === 'aus'){
+    sammle();
+    await fetch('/speichern',{method:'POST',body:JSON.stringify(daten)});
+    const r = await fetch('/modus',{method:'POST',body:JSON.stringify({modus:'aus'})});
+    daten.modus = 'aus';
+    zeigeModus(await r.text());
+    anzeigen();
+    return;
+  }
+  aktivesSpiel = spiel;
+  daten.modus = spiel;
+  anzeigen();
   sammle();
   await fetch('/speichern',{method:'POST',body:JSON.stringify(daten)});
-  const r = await fetch('/modus',{method:'POST',body:JSON.stringify({modus:was})});
-  modusAnzeigen(was);
+  const r = await fetch('/modus',{method:'POST',body:JSON.stringify({modus:spiel})});
+  zeigeModus(await r.text());
+}
+
+function zeigeModus(text){
   const s = document.getElementById('modus-status');
-  s.textContent = await r.text();
+  s.textContent = text;
   s.classList.add('an');
   clearTimeout(window._tm);
   window._tm = setTimeout(() => s.classList.remove('an'), 8000);
@@ -468,24 +508,51 @@ async function modus(was){
 
 function vorschauBrett(){
   const brett = document.getElementById('brett');
-  const f = daten.palette;
-  const muster = [0,1,2,3,1,0,3,2,2,3,0,1,3,2,1,0,1,1,2,2,0,3,3,0,2,0,1,3,3,1,0,2,0,2,3,1,2,1,0,3];
+  const legende = document.getElementById('legende');
+  const titel = document.getElementById('vorschau-titel');
+  const matrix = [];
+  for (let r = 0; r < 10; r++) matrix.push([null,null,null,null]);
+
+  if (aktivesSpiel === 'snake' && document.getElementById('panel-snake')){
+    const sd = snakeDaten();
+    const koerper = [[7,1],[6,1],[5,1],[5,2],[4,2],[3,2],[2,2],[1,2]];
+    koerper.forEach(([r,c], i) => {
+      const anteil = i === 0 ? 1 : Math.max(0.55, 1 - (i / koerper.length) * 0.45);
+      matrix[r][c] = i === 0 ? sd.kopf : sd.koerper.map(v => Math.round(v * anteil));
+    });
+    matrix[1][3] = sd.futter;
+    titel.textContent = 'Snake · ' + koerper.length + ' LEDs + Futter';
+    legende.innerHTML = 'Kopf vorn, Körper dunkelt nach hinten ab, das Futter leuchtet einzeln. ' +
+      'Pro Futter wächst die Schlange um eine LED, bis das Feld voll ist oder sie sich verkeilt. ' +
+      'Dann kommt der <b>Game Over Flash</b> und der <b>Cleanup Sweep</b>.';
+  } else {
+    const f = daten.palette;
+    const muster = [0,1,2,3,1,0,3,2,2,3,0,1,3,2,1,0,1,1,2,2,0,3,3,0,2,0,1,3,3,1,0,2,0,2,3,1,2,1,0,3];
+    let k = 0;
+    for (let r = 0; r < 10; r++) for (let c = 0; c < 4; c++){
+      if (r >= 2) matrix[r][c] = f[muster[k % muster.length] % f.length];
+      k++;
+    }
+    titel.textContent = 'Tetris · 10 Reihen × 4 Spalten';
+    legende.innerHTML = 'Drei gleiche Farben waagerecht oder senkrecht <b>match &amp; clear</b>. ' +
+      'Volle Spalte heisst <b>Game Over</b>: erst der Flash, dann der <b>Cleanup Sweep</b>, dann neu.';
+  }
+
   brett.innerHTML = '';
-  muster.forEach((k,i) => {
+  matrix.forEach(zeile => zeile.forEach(farbe => {
     const s = document.createElement('span');
-    if (i >= 8){
-      s.style.background = hex(f[k % f.length]);
-      s.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.35), 0 0 10px ' + hex(f[k % f.length]) + '55';
+    if (farbe){
+      s.style.background = hex(farbe);
+      s.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.35), 0 0 10px ' + hex(farbe) + '55';
     }
     brett.appendChild(s);
-  });
+  }));
 }
 
 function sammle(){
   daten.fps = parseInt(document.getElementById('fps').value,10) || 3;
   daten.speed = parseFloat(document.getElementById('speed').value) || 2;
-  if (!daten.snake) daten.snake = {};
-  daten.snake.fps = parseInt(document.getElementById('snake-fps').value,10) || 6;
+  snakeDaten().fps = parseInt(document.getElementById('snake-fps').value,10) || 6;
 }
 
 function zeige(text){
@@ -556,9 +623,17 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/probelauf":
-            subprocess.Popen([PYTHON, os.path.join(HIER, "ram_tetris.py"), "--play"],
-                             cwd=HIER, creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
-            self._sende("Probelauf gestartet — im Konsolenfenster mit Strg+C beenden")
+            # Probelauf richtet sich nach dem gewählten Spiel
+            modus = (lade().get("modus") or "tetris").lower()
+            if modus == "snake":
+                befehl = [PYTHON, os.path.join(HIER, "snake.py"), "--sekunden", "25"]
+                text = "Snake-Probelauf gestartet — läuft 25 Sekunden"
+            else:
+                befehl = [PYTHON, os.path.join(HIER, "ram_tetris.py"), "--play"]
+                text = "Tetris-Probelauf gestartet — im Konsolenfenster mit Strg+C beenden"
+            subprocess.Popen(befehl, cwd=HIER,
+                             creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+            self._sende(text)
             return
 
         if self.path == "/modus":
