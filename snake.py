@@ -30,12 +30,60 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
+import threading
 import time
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 
 HIER = Path(__file__).resolve().parent
+PROTOKOLL = HIER / "ram-log.txt"
+_letzter_schreibvorgang = time.time()
+_fehlschlaege = 0
+
+
+def protokoll(text: str) -> None:
+    """Zeile mit Zeitstempel in ram-log.txt — noetig, weil ohne Fenster niemand mitliest."""
+    global _letzter_schreibvorgang
+    _letzter_schreibvorgang = time.time()
+    try:
+        if PROTOKOLL.exists() and PROTOKOLL.stat().st_size > 1_000_000:
+            PROTOKOLL.write_text("", encoding="utf-8")
+        with PROTOKOLL.open("a", encoding="utf-8") as fh:
+            fh.write(f"{datetime.now():%Y-%m-%d %H:%M:%S}  [snake] {text}\n")
+    except Exception:
+        pass
+
+
+def schreibe_bild(hardware, bild) -> bool:
+    """Bild setzen und dabei die Watchdog-Uhr stellen.
+
+    Wichtig: `_letzter_schreibvorgang` darf nur bei einem *erfolgreichen* LED-Schreibvorgang
+    gesetzt werden — vorher hing die Uhr an der Protokollzeile und der Watchdog hat ein gesundes
+    Spiel neu gestartet.
+    """
+    global _letzter_schreibvorgang, _fehlschlaege
+    ok = hardware.zeige_robust(bild, schreibe=protokoll)
+    if ok:
+        _letzter_schreibvorgang = time.time()
+        _fehlschlaege = 0
+    else:
+        _fehlschlaege += 1
+    return ok
+
+
+def watchdog(hardware, grenze: float = 25.0) -> None:
+    """Beendet den Prozess, wenn die LEDs laenger als `grenze` Sekunden nicht beschrieben wurden.
+
+    Ohne Fenster merkt niemand, dass das Bild steht. Der Starter `spielen.py` startet danach neu.
+    """
+    while True:
+        time.sleep(5)
+        if time.time() - _letzter_schreibvorgang > grenze:
+            protokoll(f"Watchdog: {grenze:.0f} s ohne erfolgreichen Schreibvorgang — Neustart")
+            os._exit(3)
 LEER = (0, 0, 0)
 DIRS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
@@ -224,9 +272,9 @@ def verloren_und_putzen(hardware, reihen: int, spalten: int, farben: dict, takt:
     leer = [[LEER] * spalten for _ in range(reihen)]
     voll = [[farben["tod"]] * spalten for _ in range(reihen)]
     for _ in range(3):
-        hardware.zeige(voll)
+        schreibe_bild(hardware, voll)
         time.sleep(max(takt * 2.2, 0.10))
-        hardware.zeige(leer)
+        schreibe_bild(hardware, leer)
         time.sleep(max(takt * 1.4, 0.06))
 
     welle = farben["welle"]
@@ -237,7 +285,7 @@ def verloren_und_putzen(hardware, reihen: int, spalten: int, farben: dict, takt:
             rr = r - tiefe
             if 0 <= rr < reihen:
                 zeilen[rr] = [tuple(int(v * staerke) for v in welle)] * spalten
-        hardware.zeige(zeilen)
+        schreibe_bild(hardware, zeilen)
         time.sleep(max(takt * 0.7, 0.035))
     # danach quer von links nach rechts
     for c in range(spalten):
@@ -247,14 +295,15 @@ def verloren_und_putzen(hardware, reihen: int, spalten: int, farben: dict, takt:
             if 0 <= cc < spalten:
                 for r in range(reihen):
                     zeilen[r][cc] = tuple(int(v * staerke) for v in welle)
-        hardware.zeige(zeilen)
+        schreibe_bild(hardware, zeilen)
         time.sleep(max(takt * 0.9, 0.05))
-    hardware.zeige(leer)
+    schreibe_bild(hardware, leer)
     time.sleep(0.15)
 
 
 def spielen(hardware, reihen: int, spalten: int, fps: float, sekunden: float | None,
             saat: int | None, zeige_ascii: bool = False) -> dict:
+    global _fehlschlaege
     farben = farben_laden()
     fps = farben.get("fps", fps) if fps is None else fps
     takt = 1.0 / max(fps, 0.5)
@@ -274,7 +323,12 @@ def spielen(hardware, reihen: int, spalten: int, fps: float, sekunden: float | N
             spiel.schritt()
             laengste = max(laengste, len(spiel.koerper))
             if hardware:
-                hardware.zeige(spiel.bild(farben))
+                schreibe_bild(hardware, spiel.bild(farben))
+                if _fehlschlaege >= 40:
+                    # Die LEDs nehmen nichts mehr an: lieber beenden und frisch starten
+                    protokoll("40 Bilder in Folge nicht geschrieben — beende mich fuer einen "
+                              "Neustart durch spielen.py")
+                    os._exit(4)
             if zeige_ascii:
                 print(f"{spiel.gefressen:3d}  {spiel.ascii()}", flush=True)
             if sekunden and (time.time() - start) >= sekunden:
@@ -305,12 +359,20 @@ def main() -> int:
         hardware = HardwareIcue()
         reihen, spalten = hardware.reihen, hardware.spalten
         print("Hardware:", hardware.probe())
+        protokoll(f"gestartet · {hardware.probe()} · fps={args.fps}")
         if args.probe:
             return 0
+        # Ohne Fenster sieht niemand, wenn das Bild steht — der Watchdog startet neu
+        threading.Thread(target=watchdog, args=(hardware,), daemon=True).start()
 
     fps = args.fps if args.fps is not None else farben_laden().get("fps", 6.0)
-    ergebnis = spielen(hardware, reihen, spalten, fps, args.sekunden, args.saat,
-                       zeige_ascii=args.ascii or args.simulate)
+    try:
+        ergebnis = spielen(hardware, reihen, spalten, fps, args.sekunden, args.saat,
+                           zeige_ascii=args.ascii or args.simulate)
+    except Exception as fehler:
+        # Der Starter spielen.py sieht den Rueckgabewert und startet neu
+        protokoll(f"Absturz: {fehler!r}")
+        raise
     print(f"Runden: {ergebnis['runden']} · längste Schlange: {ergebnis['laengste']} LEDs"
           f" · bester Lauf: {max(ergebnis['bester'], ergebnis['gefressen'])} gefressen")
     if hardware:

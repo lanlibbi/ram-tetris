@@ -200,7 +200,7 @@ class Hardware:
                 self.ziele.append((g, i * pro, pro))
         self.spalten = min(a for _, _, a in self.ziele)
 
-    def zeige(self, zeilen: list[list[tuple[int, int, int]]]) -> None:
+    def zeige(self, zeilen: list[list[tuple[int, int, int]]]) -> int:
         for (geraet, offset, anzahl), farben in zip(self.ziele, zeilen):
             bild = list(geraet.colors)
             for i in range(anzahl):
@@ -258,7 +258,7 @@ class HardwareIcue:
         print(f"{self.geraet['modell']}: {self.reihen} Reihen × {self.spalten} Spalten "
               f"({len(positionen)} LEDs adressierbar)")
 
-    def zeige(self, zeilen: list[list[tuple[int, int, int]]]) -> None:
+    def zeige(self, zeilen: list[list[tuple[int, int, int]]]) -> int:
         farben = []
         for r in range(self.reihen):
             for s in range(self.spalten):
@@ -268,7 +268,37 @@ class HardwareIcue:
                 c = zeilen[r][s] if r < len(zeilen) and s < len(zeilen[r]) else LEER
                 farben.append((kennung, c))
         # Auf die SDK-Struktur abbilden: Liste von (id, r, g, b)
-        self.sdk.setze_farben_raw(farben)
+        return self.sdk.setze_farben_raw(farben)
+
+    def neu_verbinden(self, nur_kontrolle: bool = False) -> str:
+        """Nach einem Kontrollverlust neu anmelden — iCUE kann die Riegel zurueckholen.
+
+        Ohne das bleiben die LEDs einfach stehen: die Schreibaufrufe scheitern, es gibt keine
+        Ausnahme, und das Bild friert ein (so gesehen am 14.11.2026).
+
+        Wichtig: nur die Kontrolle neu anfordern. Ein Abbau der Sitzung im laufenden Prozess
+        (CorsairReleaseControl + CorsairDisconnect + CorsairConnect) hat die DLL mit einer
+        Zugriffsverletzung (0xC0000005) beendet — getestet am 14.11.2026. Wenn das Neuanfordern
+        nicht hilft, beendet sich das Spiel lieber und wird von spielen.py frisch gestartet.
+        """
+        return "Kontrolle: " + self.sdk.kontrolle(self.geraet)
+
+    def zeige_robust(self, zeilen, schreibe=None) -> bool:
+        """Bild setzen und bei Kontrollverlust einmal neu verbinden.
+
+        Gibt True zurueck, wenn das Bild wirklich geschrieben wurde.
+        """
+        code = self.zeige(zeilen)
+        if code == 0:
+            return True
+        # Fehler 2 heisst: ein anderer Client hat die Kontrolle. Einmal neu anfordern, dann
+        # nochmal schreiben. Klappt es nicht, gibt die Funktion False zurueck und der Aufrufer
+        # entscheidet (das Spiel beendet sich, spielen.py startet es frisch).
+        zustand = self.neu_verbinden()
+        if schreibe:
+            schreibe(f"LED-Schreibfehler {code} — {zustand}")
+        time.sleep(0.2)
+        return self.zeige(zeilen) == 0
 
     def probe(self) -> str:
         return f"{self.geraet['modell']} · {self.geraet['leds']} LEDs · {self.geraet['kanaele']} Kanäle"

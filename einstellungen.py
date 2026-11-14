@@ -15,6 +15,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -45,8 +46,9 @@ VORGABE = {
 AUFGABE = "RamLoop"
 ALTE_AUFGABEN = ["RamTetrisLoop", "RamSnakeLoop"]
 # Prozessmuster, an denen ein laufendes Spiel erkannt wird (das Einstellungsfenster
-# selbst heisst einstellungen.py und darf NICHT mit erwischt werden)
-SPIEL_MUSTER = ["*ram_tetris*", "*snake.py*"]
+# selbst heisst einstellungen.py und darf NICHT mit erwischt werden). Seit es die Aufsicht
+# spielen.py gibt, muessen die auch weg — sonst startet sie das Spiel gleich wieder.
+SPIEL_MUSTER = ["*ram_tetris*", "*snake.py*", "*spielen.py*", "*run.cmd*", "*run_hidden*"]
 
 
 def _rufe(befehl: list[str], text: bool = False):
@@ -596,6 +598,8 @@ class Handler(BaseHTTPRequestHandler):
                "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" "
                f"| Where-Object {{ {muster} }} "
                "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"])
+
+        time.sleep(0.5)   # der Aufsicht Zeit geben, sich zu beenden
 
         if modus == "aus":
             return "beide Spiele beendet — iCUE steuert die Riegel wieder"

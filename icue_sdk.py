@@ -102,7 +102,7 @@ class Sdk:
             "CorsairGetDevices", "CorsairGetDeviceInfo", "CorsairSetLedColors",
             "CorsairSetLedColorsBuffer",
             "CorsairSetLedColorsFlushBufferAsync", "CorsairGetLedPositions", "CorsairRequestControl",
-            "CorsairReleaseControl", "CorsairSetLayerPriority")}
+            "CorsairReleaseControl", "CorsairSetLayerPriority", "CorsairDisconnect")}
 
         if self.hat["CorsairGetDeviceCount"]:
             d.CorsairGetDeviceCount.restype = c_int
@@ -131,6 +131,11 @@ class Sdk:
         if self.hat["CorsairSetLayerPriority"]:
             d.CorsairSetLayerPriority.restype = c_int
             d.CorsairSetLayerPriority.argtypes = [c_uint]
+        if self.hat["CorsairDisconnect"]:
+            # Nur fuer das Wiederverbinden: CorsairConnect zweimal hintereinander meldet
+            # "ungueltige Operation", vorher muss getrennt werden.
+            d.CorsairDisconnect.restype = c_int
+            d.CorsairDisconnect.argtypes = []
 
     # -- Verbindung ------------------------------------------------------------
     def verbinde(self) -> str:
@@ -205,6 +210,14 @@ class Sdk:
         return [{"id": feld[i].id, "x": feld[i].cx, "y": feld[i].cy}
                 for i in range(min(groesse.value, max_))]
 
+    def trennen(self) -> str:
+        """Verbindung loesen, damit ein erneutes CorsairConnect nicht abgelehnt wird."""
+        if not self.hat.get("CorsairDisconnect"):
+            return "keine Trennfunktion"
+        code = self.dll.CorsairDisconnect()
+        self.verbunden = False
+        return FEHLER.get(code, str(code))
+
     def kontrolle(self, geraet: dict, exklusiv: bool = True) -> str:
         if not self.hat.get("CorsairRequestControl"):
             return "keine Kontrollfunktion"
@@ -224,13 +237,14 @@ class Sdk:
         puffer = (LedColor * n)()
         for i, (kennung, (r, g, b)) in enumerate(farben):
             puffer[i] = LedColor(kennung, r, g, b, 255)
-        kennung_bytes = self._letzte_id
-        if self.hat.get("CorsairSetLedColorsBuffer") and self.hat.get("CorsairSetLedColorsFlushBufferAsync"):
-            code = self.dll.CorsairSetLedColorsBuffer(kennung_bytes, n, puffer)
-            if code == 0:
-                self.dll.CorsairSetLedColorsFlushBufferAsync()
-            return code
-        return self.dll.CorsairSetLedColors(kennung_bytes, n, puffer)
+        # Immer synchron schreiben, nie ueber den Puffer.
+        #
+        # Der Puffer-Weg (CorsairSetLedColorsBuffer + CorsairSetLedColorsFlushBufferAsync) raeumt
+        # asynchron auf und griff dabei auf Speicher zu, der schon freigegeben war: der Prozess
+        # starb mit 0xC0000005, die LEDs blieben beim letzten Bild stehen — von aussen sieht das
+        # wie ein Haenger aus (so passiert am 14.11.2026 bei Snake). Der synchrone Aufruf ist
+        # einen Hauch langsamer und dafuer stabil.
+        return self.dll.CorsairSetLedColors(self._letzte_id, n, puffer)
 
     def setze_farben(self, geraet: dict, farben: list[tuple[int, int, int]]) -> int:
         """Setzt die LEDs 0..n-1 der Reihe nach. Gibt den SDK-Fehlercode zurück."""
