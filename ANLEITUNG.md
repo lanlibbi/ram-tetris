@@ -217,3 +217,36 @@ Gespeichert wird in `einstellungen.json`:
 Spiel. Deshalb hat die Aufgabe eine feste Kommandozeile und muss beim Umschalten nur neu gestartet
 werden — Farben und Tempo gelten ab dem nächsten Start.
 
+## 8. Wenn das Bild steht: Protokoll, Aufsicht, fensterloser Start
+
+**Warum das Bild einfrieren konnte:** das SDK bietet zwei Wege, LEDs zu setzen — synchron
+(`CorsairSetLedColors`) und über einen Puffer mit asynchronem Flush
+(`CorsairSetLedColorsBuffer` + `CorsairSetLedColorsFlushBufferAsync`). Der Puffer-Weg räumt
+nebenläufig auf und griff dabei auf bereits freigegebenen Speicher zu: der Prozess starb mit
+`0xC0000005`, die LEDs blieben beim letzten Bild stehen. Von außen sieht das wie ein Hänger aus,
+der Prozess ist aber tot. **Es wird jetzt immer synchron geschrieben** (`icue_sdk.py`,
+`setze_farben_raw`) — einen Hauch langsamer, dafür stabil.
+
+**Aufsicht.** `RamLoop` startet `run_hidden.vbs` → `run.cmd` → `spielen.py`. `spielen.py` liest
+`einstellungen.json`, startet das gewählte Spiel als Kindprozess und passt auf:
+
+| Datei | Inhalt |
+|---|---|
+| `ram-log.txt` | Start, Ende mit Rückgabewert, LED-Schreibfehler, Watchdogs |
+| `ram-ausgabe.txt` | alles, was das Spiel auf die Konsole schreibt (Absturzspuren) |
+
+Stirbt das Spiel, startet die Aufsicht es nach ein paar Sekunden neu (bis 50 Versuche, dann gibt
+sie auf). Eine Dateisperre sorgt dafür, dass nie zwei Aufsichten nebeneinander laufen — beide
+würden auf dieselben LEDs schreiben.
+
+**Zweiter Schutz im Spiel:** bleibt ein Bild 25 Sekunden ohne erfolgreichen Schreibvorgang (oder
+scheitern 40 Bilder in Folge), beendet sich das Spiel selbst und die Aufsicht startet es frisch.
+Das ist der Ausweg, wenn iCUE die Kontrolle zurückholt: einmal wird sie über
+`CorsairRequestControl` neu angefordert, hilft das nicht, ist ein frischer Prozess der ehrlichere
+Weg. Die Sitzung im laufenden Prozess abzubauen (`ReleaseControl` + `Disconnect` + `Connect`) hat
+die DLL mit einer Zugriffsverletzung beendet — nicht nachmachen.
+
+**Kein Fenster mehr.** Die Aufgabe ruft `wscript.exe` mit `run_hidden.vbs` auf; Skripte mit
+`wscript` haben keine Konsole, und `run.cmd` wird mit Fensterstil 0 gestartet. Nachgeprüft: alle
+Prozesse der Kette melden Fenstergriff 0.
+
