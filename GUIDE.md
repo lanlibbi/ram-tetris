@@ -282,6 +282,28 @@ C:\Program Files\Corsair\Corsair iCUE5 Software\iCUESDK.x64_2019.dll
 Fehlt sie überall, sagt das Skript das beim Start — dann fehlt der Mainboard-Hersteller-Software
 die SDK-Komponente, oder man besorgt sie über Corsairs SDK-Seite.
 
+### Ist die DLL Gigabyte-spezifisch? Nein.
+
+Es ist **Corsairs eigene cue-sdk**; die Jahreszahl `_2019` steht für die SDK-4-Schnittstelle, Gigabyte
+(oder MSI, ASUS) liefert sie nur mit. Auf dem Referenzrechner gemessen bietet die DLL genau den
+SDK-4-Satz: `CorsairConnect`, `CorsairGetDevices`, `CorsairGetLedPositions` — und **kein**
+`CorsairPerformProtocolHandshake` und **kein** `CorsairGetDeviceCount`, das wäre die ältere SDK-3-API.
+Sie ist also kein Hersteller-Build und läuft auf anderen Windows-Rechnern unter diesen Bedingungen:
+
+| Bedingung | Warum | Symptom, wenn es fehlt |
+|---|---|---|
+| **iCUE 4/5 installiert und gestartet** | die DLL ist nur ein Client des iCUE-Dienstes, sie spricht nicht selbst mit der Hardware | Fehler 1 „nicht verbunden" |
+| DLL und iCUE aus derselben Generation | das Protokoll zwischen DLL und Dienst ist versioniert | Fehler 3 „Protokoll unvereinbar" |
+| Bitbreite passt zu Python | 64-Bit-Interpreter braucht die `x64`-DLL | die DLL lädt gar nicht |
+| Visual-C++-Runtime vorhanden | die DLL hängt davon ab | die DLL lädt gar nicht |
+
+Gesucht wird in dieser Reihenfolge: `ICUESDK_DLL` (Umgebungsvariable, gewinnt) → bekannte
+Installationsorte (Corsair, Gigabyte, MSI, ASUS) → begrenzte Suche in beiden `Program Files`-Ordnern,
+mit Vorliebe für die Bitbreite des Interpreters.
+
+**Die DLL nicht ins Repository legen und nicht weitergeben.** Sie ist Corsairs Datei; jeder Rechner
+soll seine eigene mitbringen. Deshalb liegt in diesem Projekt keine.
+
 ## 2. Erster Start: prüfen, ob das Feld erkannt wird
 
 Im Ordner des Spiels eine Eingabeaufforderung öffnen (Shift + Rechtsklick → „Terminal hier öffnen")
