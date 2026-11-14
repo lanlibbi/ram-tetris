@@ -38,6 +38,10 @@ VORGABE = {
     # Snake: eigene Farben, Verloren und Putzen teilt es mit Tetris
     "snake": {"kopf": [255, 214, 0], "koerper": [0, 190, 110],
               "futter": [255, 45, 45], "fps": 6},
+    "pong": {"schlaeger": [0, 220, 255], "ball": [255, 255, 255],
+             "treffer": [255, 214, 0], "fps": 8},
+    "invaders": {"schiff": [0, 220, 255], "alien": [140, 255, 90],
+                 "schuss": [255, 214, 0], "alien_schuss": [255, 60, 200], "fps": 10},
     # welches Spiel laeuft gerade: "tetris", "snake" oder "aus"
     "modus": "tetris",
 }
@@ -48,7 +52,8 @@ ALTE_AUFGABEN = ["RamTetrisLoop", "RamSnakeLoop"]
 # Prozessmuster, an denen ein laufendes Spiel erkannt wird (das Einstellungsfenster
 # selbst heisst einstellungen.py und darf NICHT mit erwischt werden). Seit es die Aufsicht
 # spielen.py gibt, muessen die auch weg — sonst startet sie das Spiel gleich wieder.
-SPIEL_MUSTER = ["*ram_tetris*", "*snake.py*", "*spielen.py*", "*run.cmd*", "*run_hidden*"]
+SPIEL_MUSTER = ["*ram_tetris*", "*snake.py*", "*pong.py*", "*invaders.py*",
+                "*spielen.py*", "*run.cmd*", "*run_hidden*"]
 
 
 def _rufe(befehl: list[str], text: bool = False):
@@ -303,6 +308,8 @@ SEITE = """<!doctype html>
   <div class="reiter" id="reiter">
     <button type="button" data-spiel="tetris" onclick="waehle('tetris')">Tetris</button>
     <button type="button" data-spiel="snake" onclick="waehle('snake')">Snake</button>
+    <button type="button" data-spiel="pong" onclick="waehle('pong')">Pong</button>
+    <button type="button" data-spiel="invaders" onclick="waehle('invaders')">Invaders</button>
     <span class="trenner"></span>
     <span class="hinweis">läuft: <b id="laeuft">—</b></span>
     <button type="button" class="aus" data-spiel="aus" onclick="waehle('aus')">Off</button>
@@ -339,8 +346,32 @@ SEITE = """<!doctype html>
     </div>
   </div>
 
+  <div class="panel" id="panel-pong">
+    <div class="teiler-text">Pong Colors <span>Schlagfläche, Ball und Trefferblitz</span></div>
+    <div class="farben" id="pong-farben"></div>
+
+    <div class="teiler-text">Speed <span>Züge je Sekunde</span></div>
+    <div class="zahlen">
+      <div class="feld"><label>Pong Speed</label>
+        <input type="number" id="pong-fps" min="2" max="30" step="1">
+        <small>höher = schneller</small></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-invaders">
+    <div class="teiler-text">Invaders Colors <span>Schiff, Aliens und beide Schüsse</span></div>
+    <div class="farben" id="invaders-farben"></div>
+
+    <div class="teiler-text">Speed <span>Züge je Sekunde</span></div>
+    <div class="zahlen">
+      <div class="feld"><label>Invaders Speed</label>
+        <input type="number" id="invaders-fps" min="2" max="30" step="1">
+        <small>höher = schneller</small></div>
+    </div>
+  </div>
+
   <div class="teiler"></div>
-  <div class="teiler-text">Sequences <span>Game Over und Cleanup gelten für beide Spiele</span></div>
+  <div class="teiler-text">Sequences <span>Game Over und Cleanup gelten für alle Spiele</span></div>
   <div class="farben" id="sequenzen"></div>
 </section>
 
@@ -427,9 +458,23 @@ function kachel(titel, farbe, beiAenderung, extra){
   return b;
 }
 
+function spielDataSafe(name){
+  const vorgaben = {
+    pong: {schlaeger:[0,220,255], ball:[255,255,255], treffer:[255,214,0], fps:8},
+    invaders: {schiff:[0,220,255], alien:[140,255,90], schuss:[255,214,0],
+               alien_schuss:[255,60,200], fps:10}
+  };
+  return spielDaten(name, vorgaben[name] || {});
+}
+
+function spielDaten(name, vorgabe){
+  if (!daten[name]) daten[name] = JSON.parse(JSON.stringify(vorgabe));
+  for (const k in vorgabe) if (!(k in daten[name])) daten[name][k] = vorgabe[k];
+  return daten[name];
+}
+
 function snakeDaten(){
-  if (!daten.snake) daten.snake = {kopf:[255,214,0], koerper:[0,190,110], futter:[255,45,45], fps:6};
-  return daten.snake;
+  return spielDaten('snake', {kopf:[255,214,0], koerper:[0,190,110], futter:[255,45,45], fps:6});
 }
 
 function baue(){
@@ -445,6 +490,25 @@ function baue(){
   sn.appendChild(kachel('Snake Body', sd.koerper, neu => sd.koerper = neu));
   sn.appendChild(kachel('Food', sd.futter, neu => sd.futter = neu));
   document.getElementById('snake-fps').value = sd.fps || 6;
+
+  const po = document.getElementById('pong-farben');
+  po.innerHTML = '';
+  const pd = spielDaten('pong', {schlaeger:[0,220,255], ball:[255,255,255],
+                                 treffer:[255,214,0], fps:8});
+  po.appendChild(kachel('Paddle', pd.schlaeger, neu => pd.schlaeger = neu));
+  po.appendChild(kachel('Ball', pd.ball, neu => pd.ball = neu));
+  po.appendChild(kachel('Hit Flash', pd.treffer, neu => pd.treffer = neu));
+  document.getElementById('pong-fps').value = pd.fps || 8;
+
+  const iv = document.getElementById('invaders-farben');
+  iv.innerHTML = '';
+  const idd = spielDaten('invaders', {schiff:[0,220,255], alien:[140,255,90],
+                                      schuss:[255,214,0], alien_schuss:[255,60,200], fps:10});
+  iv.appendChild(kachel('Ship', idd.schiff, neu => idd.schiff = neu));
+  iv.appendChild(kachel('Aliens', idd.alien, neu => idd.alien = neu));
+  iv.appendChild(kachel('Own Shot', idd.schuss, neu => idd.schuss = neu));
+  iv.appendChild(kachel('Enemy Shot', idd.alien_schuss, neu => idd.alien_schuss = neu));
+  document.getElementById('invaders-fps').value = idd.fps || 10;
 
   const sq = document.getElementById('sequenzen');
   sq.innerHTML = '';
@@ -472,10 +536,12 @@ function anzeigen(){
   document.querySelectorAll('#reiter button[data-spiel]').forEach(b => {
     b.classList.toggle('aktiv', b.dataset.spiel === aktivesSpiel && b.dataset.spiel !== 'aus');
   });
-  document.getElementById('panel-tetris').classList.toggle('aktiv', aktivesSpiel === 'tetris');
-  document.getElementById('panel-snake').classList.toggle('aktiv', aktivesSpiel === 'snake');
+  document.querySelectorAll('.panel').forEach(pl => {
+    pl.classList.toggle('aktiv', pl.id === 'panel-' + aktivesSpiel);
+  });
+  const namen = {tetris: 'Tetris', snake: 'Snake', pong: 'Pong', invaders: 'Invaders'};
   document.getElementById('laeuft').textContent =
-    (daten.modus === 'aus') ? 'nichts' : (daten.modus === 'snake' ? 'Snake' : 'Tetris');
+    (daten.modus === 'aus') ? 'nichts' : (namen[daten.modus] || 'Tetris');
   vorschauBrett();
 }
 
@@ -513,7 +579,29 @@ function vorschauBrett(){
   const matrix = [];
   for (let r = 0; r < 10; r++) matrix.push([null,null,null,null]);
 
-  if (aktivesSpiel === 'snake' && document.getElementById('panel-snake')){
+  if (aktivesSpiel === 'pong'){
+    const pd = spielDataSafe('pong');
+    const schlaegerZellen = [[9,1],[9,2]];
+    const ballZellen = [[4,2]];
+    schlaegerZellen.forEach(([r,c]) => matrix[r][c] = pd.schlaeger);
+    ballZellen.forEach(([r,c]) => matrix[r][c] = pd.treffer);
+    titel.textContent = 'Pong · Ball zwischen zwei Schlagflächen';
+    legende.innerHTML = 'Der Ball läuft senkrecht und prallt an den Seitenwänden ab. Jeder ' +
+      'Rückläufer macht ihn schneller; geht er unten vorbei, folgen <b>Game Over Flash</b> und ' +
+      '<b>Cleanup Sweep</b>.';
+  } else if (aktivesSpiel === 'invaders'){
+    const idd = spielDataSafe('invaders');
+    const aliens = [[1,0],[1,1],[1,2],[1,3],[2,0],[2,1],[2,2],[2,3]];
+    aliens.forEach(([r,c]) => matrix[r][c] = idd.alien);
+    matrix[5][1] = idd.schuss;
+    matrix[6][3] = idd.alien_schuss;
+    matrix[9][2] = idd.schiff;
+    titel.textContent = 'Invaders · Aliens steigen herab';
+    legende.innerHTML = 'Das Schiff schiesst nach oben, die Aliens feuern zurück und steigen ' +
+      'Reihe für Reihe herab. Werden sie zu tief, folgen <b>Game Over Flash</b> und ' +
+      '<b>Cleanup Sweep</b>; ist der Block abgeräumt, läuft nur der Putzlauf und die nächste ' +
+      'Welle kommt.';
+  } else if (aktivesSpiel === 'snake' && document.getElementById('panel-snake')){
     const sd = snakeDaten();
     const koerper = [[7,1],[6,1],[5,1],[5,2],[4,2],[3,2],[2,2],[1,2]];
     koerper.forEach(([r,c], i) => {
@@ -553,6 +641,9 @@ function sammle(){
   daten.fps = parseInt(document.getElementById('fps').value,10) || 3;
   daten.speed = parseFloat(document.getElementById('speed').value) || 2;
   snakeDaten().fps = parseInt(document.getElementById('snake-fps').value,10) || 6;
+  spielDaten('pong', {fps: 8}).fps = parseInt(document.getElementById('pong-fps').value,10) || 8;
+  spielDaten('invaders', {fps: 10}).fps =
+    parseInt(document.getElementById('invaders-fps').value,10) || 10;
 }
 
 function zeige(text){
@@ -658,7 +749,7 @@ class Handler(BaseHTTPRequestHandler):
     # -- Aktionen -------------------------------------------------------
     def _spiel_umschalten(self, modus: str) -> str:
         """Beendet beide Spiele und startet das gewünschte über seine Windows-Aufgabe."""
-        if modus not in ("tetris", "snake", "aus"):
+        if modus not in ("tetris", "snake", "pong", "invaders", "aus"):
             return f"unbekannter Spielmodus: {modus!r}"
 
         daten = lade()

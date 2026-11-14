@@ -52,14 +52,22 @@ def einstellungen() -> dict:
     return {}
 
 
+# Ein Eintrag je Spiel: Skript und wie das Tempo aus den Einstellungen gelesen wird
+SPIELE = {
+    "snake": ("snake.py", lambda d: ["--fps", str((d.get("snake") or {}).get("fps", 6))]),
+    "pong": ("pong.py", lambda d: ["--fps", str((d.get("pong") or {}).get("fps", 8))]),
+    "invaders": ("invaders.py", lambda d: ["--fps", str((d.get("invaders") or {}).get("fps", 10))]),
+}
+
+
 def befehl(daten: dict) -> list[str] | None:
     """Welches Spiel soll laufen? None heisst: keins."""
     modus = (daten.get("modus") or "tetris").lower()
     if modus == "aus":
         return None
-    if modus == "snake":
-        fps = (daten.get("snake") or {}).get("fps", 6)
-        return [sys.executable, str(HIER / "snake.py"), "--fps", str(fps)]
+    if modus in SPIELE:
+        skript, tempo = SPIELE[modus]
+        return [sys.executable, str(HIER / skript)] + tempo(daten)
     aufnahme = HIER / "recorded" / "ram-lauf2.json"
     return [sys.executable, str(HIER / "ram_tetris.py"), "--replay", str(aufnahme),
             "--loop", "--speed", str(daten.get("speed", 2))]

@@ -268,3 +268,59 @@ bei Snake zeigt sie Kopf, Körper, Futter, bei Tetris das Spielfeld.
 Ein weiteres Spiel (Pong, Game of Life, …) braucht damit nur drei Dinge: ein Skript, einen Eintrag
 in `spielen.py` und einen Reiter mit seinem Farbblock.
 
+## 10. Pong und Space Invaders
+
+Beide Spiele nutzen die gemeinsame Basis `spielbasis.py`: dieselbe Anzeige mit
+Wiederverbinden, dasselbe Protokoll, derselbe Watchdog und dieselbe Todes-Sequenz
+(**Game Over Flash** rot, dann **Cleanup Sweep** weiß). Farben und Tempo stehen im Dashboard unter
+ihrem eigenen Reiter.
+
+### Pong (`pong.py`)
+
+Der Ball läuft senkrecht, prallt an den Seitenwänden ab, unten steht eine zwei LEDs breite
+Schlagfläche. Jeder Rückläufer macht den Ball schneller. Geht er unten vorbei, kommt der
+Verloren-Screen.
+
+Der Rechner führt die Schlagfläche selbst — mit Vorausschau, sonst wäre er chancenlos: er rechnet
+aus, in welcher Spalte der Ball unten ankommt (Seitenwände mitgerechnet). Damit wäre er unfehlbar,
+deshalb verschätzt er sich pro Ballwechsel mit einer Wahrscheinlichkeit, die mit der Länge des
+Wechsels steigt — um **zwei** Spalten, denn eine Spalte daneben bleibt bei zwei LEDs Breite
+folgenlos (mit ±1 endete in der Messung kein einziger Ballwechsel).
+
+Gemessen über 20.000 Züge: im Schnitt **12 Rückläufer** je Runde, längster 45, kürzester 2. Bei
+8 Zügen/s endet eine Runde etwa alle halbe Minute.
+
+### Space Invaders (`invaders.py`)
+
+Ein waagerecht marschierender Alienblock ist auf vier Spalten sinnlos — er stößt nach zwei Zügen
+an und steht nach Sekunden unten. Der Angriff läuft deshalb **senkrecht**: ein Block aus zwei
+Reihen à vier Aliens steigt Reihe für Reihe herab, das Schiff unten schießt nach oben und weicht
+feindlichen Schüssen aus.
+
+- Schiff getroffen oder Aliens auf der unteren Reihe → Verloren-Screen (rot + Putzlauf)
+- Block abgeräumt → nur der **Putzlauf** (ohne rot), dann die nächste, schnellere Welle
+
+Gemessen über 20.000 Züge: **147 abgeräumte Wellen** und 121 verlorene Runden — das Spiel gewinnt
+also öfter, als es verliert, und zeigt beide Abschlüsse regelmäßig (bei 10 Zügen/s etwa alle
+13–16 Sekunden).
+
+### Farben
+
+```json
+"pong":     {"schlaeger": [0,220,255], "ball": [255,255,255], "treffer": [255,214,0], "fps": 8},
+"invaders": {"schiff": [0,220,255], "alien": [140,255,90], "schuss": [255,214,0],
+             "alien_schuss": [255,60,200], "fps": 10}
+```
+
+### Ein neues Spiel anschließen
+
+Drei Stellen, mehr nicht:
+
+1. ein Skript, das `spielbasis` nutzt (`schreibe_bild`, `verloren_und_putzen`, `watchdog_starten`),
+2. ein Eintrag in `SPIELE` in `spielen.py`,
+3. ein Reiter samt Farbblock in `einstellungen.py` — plus der Name in der Modus-Prüfung von
+   `_spiel_umschalten` und in `SPIEL_MUSTER`, sonst beendet der Schalter das neue Spiel nicht.
+
+Hinweis: `snake.py` trägt diese Hilfsfunktionen noch selbst mit sich (es lief zuerst und blieb
+unangetastet) — beim nächsten Anfassen auf `spielbasis` umstellen, damit es nur eine Stelle gibt.
+
