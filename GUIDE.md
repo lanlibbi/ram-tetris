@@ -22,6 +22,28 @@ nothing to install and no extra driver.
 You do **not** need OpenRGB and you do not need a compiler. If Python is missing, the interpreter
 that comes with Blender works too (`…\Blender Foundation\Blender <ver>\<ver>\python\bin\python.exe`).
 
+### Is that DLL Gigabyte-specific? No.
+
+It is **Corsair's own cue-sdk**; the `_2019` suffix is the SDK-4 ABI, and Gigabyte (or MSI, ASUS)
+only ship it alongside their tools. Measured on the reference machine, the exports are the SDK-4
+set — `CorsairConnect`, `CorsairGetDevices`, `CorsairGetLedPositions`, and *no*
+`CorsairPerformProtocolHandshake` or `CorsairGetDeviceCount`, which are the SDK-3 API. So it is not
+a vendor build, and it runs on other Windows machines with these conditions:
+
+| Condition | Why | Symptom if it fails |
+|---|---|---|
+| **iCUE 4/5 installed and running** | the DLL is only a client to the iCUE service, it does not talk to hardware itself | error 1 "not connected" |
+| DLL and iCUE from the same generation | the protocol between DLL and service is versioned | error 3 "protocol incompatible" |
+| bitness matches Python | 64-bit interpreter needs the `x64` DLL | the DLL does not load at all |
+| Visual C++ runtime present | the DLL depends on it | the DLL does not load |
+
+The script finds the DLL by itself: `ICUESDK_DLL` (environment variable, wins) → known install
+paths (Corsair, Gigabyte, MSI, ASUS) → bounded search of both `Program Files` folders, preferring
+the bitness that matches the interpreter.
+
+**Do not copy the DLL into a repository or hand it to other people.** It is Corsair's file; let each
+machine bring its own. That is also why this project ships no DLL.
+
 ## 2. First run
 
 ```

@@ -24,12 +24,61 @@ from ctypes import POINTER, Structure, byref, c_byte, c_char_p, c_int, c_ubyte, 
 
 STRING_M = 128
 
+# Bekannte Orte, von denen die DLL kommt: Corsair selbst und Werkzeuge von Mainboard-Herstellern,
+# die die Corsair-SDK mitliefern. Die Reihenfolge ist nur eine Vorliebe — es ist dieselbe
+# Schnittstelle, und welche Datei gefunden wird, ist egal, solange die Version zu iCUE passt.
 KANDIDATEN = [
-    r"C:\Program Files\GIGABYTE\Control Center\Lib\MBStorage\iCUESDK.x64_2019.dll",
-    r"C:\Program Files (x86)\GIGABYTE\Control Center\Lib\MBStorage\iCUESDK.x64_2019.dll",
     r"C:\Program Files\Corsair\Corsair iCUE5 Software\iCUESDK.x64_2019.dll",
     r"C:\Program Files\Corsair\CORSAIR iCUE 4 Software\iCUESDK.x64_2019.dll",
+    r"C:\Program Files\GIGABYTE\Control Center\Lib\MBStorage\iCUESDK.x64_2019.dll",
+    r"C:\Program Files (x86)\GIGABYTE\Control Center\Lib\MBStorage\iCUESDK.x64_2019.dll",
+    r"C:\Program Files\MSI\MSI Center\iCUESDK.x64_2019.dll",
+    r"C:\Program Files (x86)\ASUS\AXSP\iCUESDK.x64_2019.dll",
 ]
+
+# Tiefe, bis zu der in Program Files gesucht wird. Ohne Grenze würde die Suche auf einem vollen
+# Rechner Minuten dauern.
+SUCH_TIEFE = 6
+
+
+def finde_dll() -> str | None:
+    """Pfad zur iCUESDK-DLL — erst aus der Umgebung, dann bekannte Orte, dann suchen.
+
+    Warum die Suche nötig ist: die DLL gehört zu Corsair, wird aber von Fremdwerkzeugen
+    mitinstalliert. Auf einem Rechner ohne Gigabyte/MSI/ASUS-Tools liegt sie vielleicht nur im
+    iCUE-Ordner oder ganz woanders. Mit `ICUESDK_DLL` lässt sich ein Pfad erzwingen.
+    """
+    eigen = os.environ.get("ICUESDK_DLL")
+    if eigen and os.path.exists(eigen):
+        return eigen
+    for pfad in KANDIDATEN:
+        if os.path.exists(pfad):
+            return pfad
+    return _suche_dll()
+
+
+def _suche_dll() -> str | None:
+    """Program-Ordner nach iCUESDK*.dll absuchen, passend zur Bitbreite des Interpreters."""
+    breite = 64 if ctypes.sizeof(c_void_p) == 8 else 32
+    gefunden: list[str] = []
+    for wurzel in (r"C:\Program Files", r"C:\Program Files (x86)"):
+        if not os.path.isdir(wurzel):
+            continue
+        basis_tiefe = wurzel.count(os.sep)
+        for pfad, ordner, dateien in os.walk(wurzel):
+            if pfad.count(os.sep) - basis_tiefe >= SUCH_TIEFE:
+                ordner[:] = []
+            for name in dateien:
+                if name.lower().startswith("icuesdk") and name.lower().endswith(".dll"):
+                    gefunden.append(os.path.join(pfad, name))
+    if not gefunden:
+        return None
+    # passende Bitbreite zuerst, dann die neuere Jahreszahl
+    def rang(pfad: str):
+        name = os.path.basename(pfad).lower()
+        fremd = (f"x{breite}" not in name)
+        return (fremd, -len(name), pfad)
+    return sorted(gefunden, key=rang)[0]
 
 # Gerätetypen laut iCUESDK.h
 CDT_MEMORY_MODULE = 0x0080
@@ -86,9 +135,13 @@ class DeviceFilter(Structure):
 
 class Sdk:
     def __init__(self, pfad: str | None = None):
-        self.pfad = pfad or next((p for p in KANDIDATEN if os.path.exists(p)), None)
+        self.pfad = pfad or finde_dll()
         if not self.pfad:
-            raise SystemExit("iCUE-SDK-DLL nicht gefunden. Gesucht:\n  " + "\n  ".join(KANDIDATEN))
+            raise SystemExit(
+                "iCUE-SDK-DLL nicht gefunden.\n"
+                "Gesucht an den bekannten Orten und in Program Files.\n"
+                "Abhilfe: iCUE installieren (die DLL kommt mit iCUE 4/5 oder mit Werkzeugen von\n"
+                "Gigabyte/MSI/ASUS), oder den Pfad über die Umgebungsvariable ICUESDK_DLL setzen.")
         self.dll = ctypes.CDLL(self.pfad)
         self._signaturen()
         self.verbunden = False

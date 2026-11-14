@@ -25,6 +25,11 @@ C:\Program Files\Corsair\Corsair iCUE5 Software\iCUESDK.x64_2019.dll
 
 It is called via `ctypes` — no compiler, no extra package. Blender's bundled Python works too.
 
+That DLL is **Corsair's own cue-sdk**, not a Gigabyte build — vendors only bundle it. It is portable
+to any Windows machine with **iCUE 4/5 installed and running**, because it is a client to the iCUE
+service and does not touch the hardware itself. The script looks for it (env `ICUESDK_DLL` → known
+install paths → search in `Program Files`); nothing is redistributed here.
+
 The grid is **10 rows × 4 columns**: the geometry is read from `CorsairGetLedPositions`, not
 guessed, so a different module count rearranges the field by itself.
 
