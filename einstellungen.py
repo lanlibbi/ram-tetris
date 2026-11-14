@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HIER = os.path.dirname(os.path.abspath(__file__))
 KONFIG = os.path.join(HIER, "einstellungen.json")
 START_CMD = os.path.join(HIER, "start.cmd")
+ICON = os.path.join(HIER, "ram-tetris.ico")     # von mache_icon.py erzeugt
 AUFNAHME = os.path.join(HIER, "recorded", "ram-lauf2.json")
 PYTHON = sys.executable
 PORT = int(os.environ.get("RAMTETRIS_PORT", "8787"))
@@ -794,6 +795,7 @@ class Handler(BaseHTTPRequestHandler):
             ps = ("$w = New-Object -ComObject WScript.Shell; "
                   f"$s = $w.CreateShortcut('{STARTUP}'); "
                   f"$s.TargetPath = '{START_CMD}'; $s.WorkingDirectory = '{HIER}'; "
+                  f"$s.IconLocation = '{ICON},0'; "
                   "$s.WindowStyle = 7; $s.Save()")
             subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True)
             if os.path.exists(STARTUP):

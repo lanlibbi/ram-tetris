@@ -324,3 +324,32 @@ Drei Stellen, mehr nicht:
 Hinweis: `snake.py` trägt diese Hilfsfunktionen noch selbst mit sich (es lief zuerst und blieb
 unangetastet) — beim nächsten Anfassen auf `spielbasis` umstellen, damit es nur eine Stelle gibt.
 
+## 11. Das Programmsymbol
+
+Die Verknüpfung auf dem Desktop und im Autostart trägt ein eigenes Symbol statt des
+Batch-Kastens: vier Farbkacheln (Bernstein, Blau, Rot, Weiß) auf dunklem, abgerundetem Grund —
+dasselbe Motiv wie das Logo auf der Einstellungsseite.
+
+Erzeugt wird es von `mache_icon.py` ohne fremde Bibliotheken: das Skript rechnet die Pixel selbst
+(vierfache Abtastung gegen Treppchen) und schreibt ein ICO mit sieben Größen von 16 bis 256 px als
+32-Bit-BMP mit AND-Maske.
+
+```
+python mache_icon.py              # schreibt ram-tetris.ico
+python mache_icon.py --vorschau   # zusätzlich ram-tetris-vorschau.png zum Ansehen
+```
+
+Farben ändern: die Liste `KACHELN` oben im Skript. Wer das Symbol an das eigene Farbschema
+anpassen will, braucht nur diese vier Tripel austauschen und das Skript erneut laufen lassen.
+
+**Eintragen in die Verknüpfung** (Deploy macht das automatisch, `einstellungen.py` setzt
+`IconLocation`):
+
+```powershell
+$w = New-Object -ComObject WScript.Shell
+$s = $w.CreateShortcut("$env:USERPROFILE\Desktop\RAM-Tetris Einstellungen.lnk")
+$s.IconLocation = "C:\...\ram-tetris.ico,0"
+$s.Save()
+ie4uinit.exe -show        # sonst zeigt der Explorer weiter das alte Bild
+```
+
