@@ -19,6 +19,11 @@ nothing to install and no extra driver.
 | **Python 3.9 or newer** | runs the games | python.org, tick "Add Python to PATH" |
 | Corsair Vengeance RGB memory | that is what the games draw on | — |
 
+**iCUE must be installed and running.** This is the one hard requirement: the games do not talk to
+the memory modules themselves, they only set colours through iCUE's SDK. Without iCUE the modules
+keep whatever iCUE last did — nothing to see, no error on the LEDs. If iCUE is running but its SDK
+control is switched off, the script reports error 1 on startup.
+
 You do **not** need OpenRGB and you do not need a compiler. If Python is missing, the interpreter
 that comes with Blender works too (`…\Blender Foundation\Blender <ver>\<ver>\python\bin\python.exe`).
 
@@ -270,6 +275,12 @@ Tempo und Ablauf ändert. Alles ohne Programmieren.
 | **iCUESDK-DLL** | die Schnittstelle, über die Farben gesetzt werden | kommt meist schon mit: Gigabyte Control Center, MSI Center, ASUS Armoury — oder iCUE selbst |
 | **Python 3.9 oder neuer** | führt das Spiel aus | python.org, „Add Python to PATH" anhaken |
 | Corsair-RAM **mit RGB** | das Spielfeld | z. B. Vengeance RGB Pro / Pro SL |
+
+**iCUE muss installiert und gestartet sein.** Das ist die einzige harte Voraussetzung: die Spiele
+sprechen nicht selbst mit den Riegeln, sie setzen Farben über die SDK von iCUE. Ohne iCUE bleiben die
+Riegel bei dem, was iCUE zuletzt gemacht hat — man sieht nichts, und auf den LEDs steht auch keine
+Fehlermeldung. Läuft iCUE, ist dort aber die SDK-Steuerung abgeschaltet, meldet das Skript beim Start
+Fehler 1.
 
 Die DLL sucht das Skript selbst:
 

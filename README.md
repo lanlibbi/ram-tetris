@@ -9,6 +9,9 @@ Nothing to install, no extra driver, no OpenRGB.
 
 ![Settings page, Tetris tab](bilder/panel-tetris.jpg)
 
+**Requirement: iCUE (4 or 5) installed and running.** The games only set colours through iCUE's SDK;
+they do not talk to the memory modules themselves. Without iCUE nothing happens on the LEDs.
+
 **Full guide: [GUIDE.md](GUIDE.md)** — English on top, German below. Setup, colours, speed,
 autostart, logs, troubleshooting, and how to add your own game.
 
@@ -92,6 +95,9 @@ MIT. Model was the short "Mein RAM spielt Tetris, ganz ohne mich" by **Bastel Ne
 Vier Spiele für die RGB-LEDs der Arbeitsspeicher-Riegel: **Tetris**, **Snake**, **Pong** und
 **Space Invaders**. Sie laufen über die iCUE-SDK-DLL, die mit der Corsair-Software ohnehin auf dem
 Rechner liegt — keine Installation, kein zusätzlicher Treiber, kein OpenRGB.
+
+**Voraussetzung: iCUE (4 oder 5) installiert und gestartet.** Die Spiele setzen Farben nur über die
+SDK von iCUE; sie sprechen nicht selbst mit den Riegeln. Ohne iCUE passiert auf den LEDs nichts.
 
 **Anleitung: [GUIDE.md](GUIDE.md)** — englisch oben, deutsch unten. Einrichtung, Farben, Tempo,
 Autostart, Protokoll, Fehlersuche und wie man ein eigenes Spiel anschließt.
