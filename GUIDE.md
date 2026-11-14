@@ -305,6 +305,11 @@ Das sind Gelb, Dunkelblau, Rot und Weiß (die Vorgabe). Beliebige eigene Werte g
 `--palette 00FF88,FF00AA` ergibt zwei Farben, `--palette 111111,222222,333333,444444,555555` fünf.
 Mindestens zwei, höchstens so viele, wie das Feld sinnvoll verkraftet — bei vielen Farben entstehen
 seltener Ketten.
+Alle Farben, Tempi und das gewählte Spiel stehen in `einstellungen.json`; im Repository liegt
+**`einstellungen.beispiel.json`** mit genau den Vorgaben — kopieren nach `einstellungen.json`, um
+damit zu starten. Fehlt die Datei, greifen dieselben Werte als Vorgabe; die Einstellungsseite
+schreibt sie beim ersten **Save**.
+
 
 **Der dauerhafte Weg** — im Einstellungsfenster speichern (Abschnitt 5) oder die Farbe in der Datei
 `start.cmd` ändern (Abschnitt 8), damit man den Befehl nicht jedes Mal tippen muss.
