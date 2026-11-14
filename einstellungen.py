@@ -298,8 +298,8 @@ SEITE = """<!doctype html>
   <div class="logo"><i></i><i></i><i></i><i></i></div>
   <div>
     <h1>RAM-Tetris</h1>
-    <p class="unter">Lighting Control — Tetris und Snake. Farben, Sequenzen und Takt, gespeichert in
-      <code>einstellungen.json</code>.</p>
+    <p class="unter">Lighting Control — Tetris, Snake, Pong und Invaders. Farben, Sequenzen und
+      Takt, gespeichert in <code>einstellungen.json</code>.</p>
   </div>
   <div class="badge">iCUE SDK</div>
 </header>
@@ -791,37 +791,76 @@ class Handler(BaseHTTPRequestHandler):
             fh.write('cd /d "%~dp0"\n')
             fh.write(f'"{PYTHON}" spielen.py\n')
         teile = ["start.cmd angelegt"]
-        if STARTUP:
-            ps = ("$w = New-Object -ComObject WScript.Shell; "
-                  f"$s = $w.CreateShortcut('{STARTUP}'); "
-                  f"$s.TargetPath = '{START_CMD}'; $s.WorkingDirectory = '{HIER}'; "
-                  f"$s.IconLocation = '{ICON},0'; "
-                  "$s.WindowStyle = 7; $s.Save()")
-            subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True)
-            if os.path.exists(STARTUP):
-                teile.append("Autostart-Verknüpfung gesetzt")
-        subprocess.Popen(["cmd", "/c", "start", "", START_CMD], cwd=HIER)
+
+        # Autostart über die geplante Aufgabe mit Auslöser "bei Anmeldung", nicht über den
+        # Autostart-Ordner: die Aufgabe startet versteckt (wscript) und überlebt Fehlversuche,
+        # weil spielen.py den Anlauf wiederholt. 30 s Verzögerung, damit iCUE vorher oben ist —
+        # die SDK-Verbindung braucht einen laufenden iCUE-Dienst.
+        vbs = os.path.join(HIER, "run_hidden.vbs")
+        if os.path.exists(vbs):
+            _rufe(["schtasks", "/delete", "/tn", AUFGABE, "/f"])
+            angelegt = _rufe(["schtasks", "/create", "/tn", AUFGABE,
+                              "/tr", f'wscript.exe "{vbs}"',
+                              "/sc", "onlogon", "/ru", os.environ.get("USERNAME", ""),
+                              "/it", "/delay", "0000:30", "/f"], text=True)
+            if angelegt.returncode == 0:
+                teile.append(f"Aufgabe {AUFGABE} startet bei jeder Anmeldung")
+            else:
+                teile.append("Aufgabe konnte nicht angelegt werden: "
+                             + (angelegt.stdout or angelegt.stderr).strip()[:120])
+        else:
+            teile.append("run_hidden.vbs fehlt — Autostart nicht eingerichtet")
+
+        _rufe(["schtasks", "/run", "/tn", AUFGABE])
         teile.append("Spiel gestartet")
         return "installiert: " + ", ".join(teile)
 
     def _entfernen(self) -> str:
         teile = []
+        # Aufgabe löschen: danach startet beim nächsten Anmelden nichts mehr
+        weg = _rufe(["schtasks", "/delete", "/tn", AUFGABE, "/f"], text=True)
+        if weg.returncode == 0:
+            teile.append(f"Aufgabe {AUFGABE} entfernt (kein Start mehr beim Anmelden)")
         if STARTUP and os.path.exists(STARTUP):
             os.remove(STARTUP)
-            teile.append("Autostart entfernt")
+            teile.append("alte Autostart-Verknüpfung entfernt")
         if os.path.exists(START_CMD):
             os.remove(START_CMD)
             teile.append("start.cmd gelöscht")
-        subprocess.run(["powershell", "-NoProfile", "-Command",
-                        "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" "
-                        "| Where-Object { $_.CommandLine -like '*ram_tetris*' } "
-                        "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"], capture_output=True)
+
+        daten = lade()
+        daten["modus"] = "aus"          # damit auch ein späterer Start nichts hochzieht
+        speichere(daten)
+
+        muster = " -or ".join(f"$_.CommandLine -like '{m}'" for m in SPIEL_MUSTER)
+        _rufe(["powershell", "-NoProfile", "-Command",
+               "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" "
+               f"| Where-Object {{ {muster} }} "
+               "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"])
         teile.append("laufendes Spiel beendet")
         teile.append("iCUE steuert wieder")
         return "entfernt: " + ", ".join(teile)
 
 
+def laeuft_schon(port: int) -> bool:
+    """Antwortet auf dem Port bereits ein Server?
+
+    Warum diese Prüfung nötig ist: unter Windows erlaubt SO_REUSEADDR (das HTTPServer setzt)
+    zwei Bindungen auf denselben Port — es laufen dann still zwei Einstellungsseiten, und
+    Änderungen landen abwechselnd in der einen oder anderen. Auf Linux scheitert der zweite
+    Bind von selbst, deshalb fällt es dort nicht auf.
+    """
+    import socket
+
+    with socket.socket() as probe:
+        probe.settimeout(0.5)
+        return probe.connect_ex(("127.0.0.1", port)) == 0
+
+
 def main() -> int:
+    if laeuft_schon(PORT):
+        print(f"Auf Port {PORT} antwortet schon eine Einstellungsseite — diese Instanz beendet sich.")
+        return 0
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     adresse = f"http://127.0.0.1:{PORT}/"
     print(f"RAM-Tetris Einstellungen: {adresse}")

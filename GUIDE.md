@@ -120,6 +120,36 @@ Only one game runs at a time — they all write to the same 40 LEDs.
 
 The Startup shortcut carries the project's own icon (`ram-tetris.ico`).
 
+**What runs after a reboot.** The last game you selected is remembered: the tab writes `modus` into
+`einstellungen.json`, and the supervisor reads it on every start. `Deploy` registers a scheduled
+task named `RamLoop` that fires **at logon with a 30 second delay** — iCUE has to be up before the
+SDK can connect, and the supervisor retries until it is. `Remove` deletes the task and sets
+`modus` to `aus`, so nothing comes back after a reboot.
+
+**No console window, from either route.** The task runs `wscript.exe run_hidden.vbs`; the desktop
+shortcut runs `wscript.exe einstellungen_hidden.vbs`, which starts PowerShell with
+`-WindowStyle Hidden`. Errors from the settings page cannot be printed anywhere, so they show up as
+a message box and are appended to `%TEMP%\ram-games-einstellungen.log`.
+
+**Only one settings server.** On Windows `SO_REUSEADDR` (which `HTTPServer` sets) lets two sockets
+bind the same port, so two settings pages can run side by side and silently serve different
+configuration. The script therefore probes the port first and exits if something already answers.
+
+**What runs after a reboot.** The last game you selected is remembered: the tab writes `modus` into
+`einstellungen.json`, and the supervisor reads it on every start. `Deploy` registers a scheduled
+task named `RamLoop` that fires **at logon with a 30 second delay** — iCUE has to be up before the
+SDK can connect, and the supervisor retries until it is. `Remove` deletes the task and sets
+`modus` to `aus`, so nothing comes back after a reboot.
+
+**No console window, from either route.** The task runs `wscript.exe run_hidden.vbs`; the desktop
+shortcut runs `wscript.exe einstellungen_hidden.vbs`, which starts PowerShell with
+`-WindowStyle Hidden`. Errors from the settings page cannot be printed anywhere, so they show up as
+a message box and are appended to `%TEMP%\ram-games-einstellungen.log`.
+
+**Only one settings server.** On Windows `SO_REUSEADDR` (which `HTTPServer` sets) lets two sockets
+bind the same port, so two settings pages can run side by side and silently serve different
+configuration. The script therefore probes the port first and exits if something already answers.
+
 ## 7. Recording a run and looping it (Tetris)
 
 ```
@@ -337,8 +367,25 @@ cd /d "%~dp0"
 python ram_tetris.py --replay recorded\meinelauf.json --loop --speed 2
 ```
 
-Doppelklick startet die Schleife. Für Autostart nach der Anmeldung: `Win + R`, `shell:startup`,
-eine Verknüpfung auf `start.cmd` hineinlegen.
+Danach läuft es bei jeder Anmeldung — ohne zusätzliche Software.
+
+**Was nach einem Neustart läuft.** Das zuletzt gewählte Spiel ist gemerkt: der Reiter schreibt
+`modus` in `einstellungen.json`, und der Starter liest ihn bei jedem Start. **Deploy** legt dafür
+die geplante Aufgabe `RamLoop` an, die **bei der Anmeldung mit 30 Sekunden Verzögerung** startet —
+iCUE muss vorher laufen, sonst kommt keine SDK-Verbindung zustande; der Starter versucht es so lange
+erneut, bis es klappt. **Remove** löscht die Aufgabe und setzt `modus` auf `aus`, damit nach einem
+Neustart nichts von selbst hochkommt.
+
+**Kein Konsolenfenster, auf keinem der beiden Wege.** Die Aufgabe ruft
+`wscript.exe run_hidden.vbs`; die Desktop-Verknüpfung ruft `wscript.exe einstellungen_hidden.vbs`,
+und das startet PowerShell mit `-WindowStyle Hidden`. Weil ein verstecktes Fenster nichts anzeigen
+kann, erscheinen Fehler der Einstellungsseite als Meldungsfenster und landen zusätzlich in
+`%TEMP%\ram-games-einstellungen.log`.
+
+**Nur ein Einstellungs-Server.** Unter Windows erlaubt `SO_REUSEADDR` (das `HTTPServer` setzt) zwei
+Bindungen auf denselben Port — dann laufen zwei Einstellungsseiten nebeneinander und liefern
+abwechselnd verschiedene Einstellungen. Das Skript prüft den Port deshalb vorher und beendet sich,
+wenn dort schon etwas antwortet.
 
 ## 9. Wenn etwas nicht geht
 
